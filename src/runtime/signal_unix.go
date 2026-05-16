@@ -644,6 +644,7 @@ func restoreSIGSYS() {
 //
 //go:nowritebarrierrec
 func sighandler(sig uint32, info *siginfo, ctxt unsafe.Pointer, gp *g) {
+	rearmSighandlerOnEntry(sig)
 	// The g executing the signal handler. This is almost always
 	// mp.gsignal. See delayedSignal for an exception.
 	gsignal := getg()
@@ -914,6 +915,8 @@ func sigpanic() {
 	if !canpanic() {
 		throw("unexpected signal during runtime execution")
 	}
+
+	rearmFaultSignalAfterSigpanic(gp.sig)
 
 	switch gp.sig {
 	case _SIGBUS:

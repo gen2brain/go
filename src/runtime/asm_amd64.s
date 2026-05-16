@@ -219,6 +219,14 @@ notintel:
 	MOVL	AX, runtime·processorVersionInfo(SB)
 
 nocpuinfo:
+#ifdef GOOS_haiku
+	// Allocate the per-process TLS slot via libroot's tls_allocate before
+	// any FS-relative TLS access. Doing it here covers both the cgo path
+	// (which skips needtls) and the non-cgo path.
+	MOVQ	DI, BX			// preserve g0 across the call
+	CALL	runtime·haikuTlsInit(SB)
+	MOVQ	BX, DI
+#endif
 	// if there is an _cgo_init, call it.
 	MOVQ	_cgo_init(SB), AX
 	TESTQ	AX, AX
@@ -273,6 +281,10 @@ needtls:
 #ifdef GOOS_openbsd
 	// skip TLS setup on OpenBSD
 	JMP ok
+#endif
+#ifdef GOOS_haiku
+	// haikuTlsInit ran above in nocpuinfo; the FS-relative slot is ready.
+	JMP	ok
 #endif
 
 #ifdef GOOS_windows

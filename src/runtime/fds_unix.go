@@ -17,14 +17,20 @@ func checkfds() {
 	const (
 		// F_GETFD, EBADF, O_RDWR are standard across all unixes we support, so
 		// we define them here rather than in each of the OS specific files.
-		F_GETFD = 0x01
-		EBADF   = 0x09
-		O_RDWR  = 0x02
+		// Exception: Haiku's F_GETFD is 0x02 (0x01 is F_DUPFD there).
+		F_GETFD       = 0x01
+		F_GETFD_haiku = 0x02
+		EBADF         = 0x09
+		O_RDWR        = 0x02
 	)
+	getfd := int32(F_GETFD)
+	if GOOS == "haiku" {
+		getfd = F_GETFD_haiku
+	}
 
 	devNull := []byte("/dev/null\x00")
 	for i := 0; i < 3; i++ {
-		ret, errno := fcntl(int32(i), F_GETFD, 0)
+		ret, errno := fcntl(int32(i), getfd, 0)
 		if ret >= 0 {
 			continue
 		}

@@ -108,6 +108,15 @@ var sysdir = func() *sysDir {
 				"local",
 			},
 		}
+	case "haiku":
+		return &sysDir{
+			"/etc",
+			[]string{
+				"group",
+				"passwd",
+				"profile",
+			},
+		}
 	case "wasip1":
 		// wasmtime has issues resolving symbolic links that are often present
 		// in directories like /etc/group below (e.g. private/etc/group on OSX).
@@ -636,6 +645,8 @@ func TestReaddirnamesOneAtATime(t *testing.T) {
 		dir = wd
 	case "plan9":
 		dir = "/bin"
+	case "haiku":
+		dir = "/boot/system/bin"
 	case "windows":
 		dir = Getenv("SystemRoot") + "\\system32"
 	}
@@ -1628,6 +1639,8 @@ func TestChdirAndGetwd(t *testing.T) {
 	switch runtime.GOOS {
 	case "android":
 		dirs = []string{"/system/bin"}
+	case "haiku":
+		dirs = []string{"/", "/boot/system/bin", "/tmp"}
 	case "plan9":
 		dirs = []string{"/", "/usr"}
 	case "ios", "windows", "wasip1":

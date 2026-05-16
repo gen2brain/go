@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build aix || solaris
+//go:build aix || haiku || solaris
 
 // This file handles forkAndExecInChild function for OS using libc syscall like AIX or Solaris.
 
@@ -282,6 +282,10 @@ func forkAndExecInChild(argv0 *byte, argv, envv []*byte, chroot, dir *byte, attr
 
 	// Detach fd 0 from tty
 	if sys.Noctty {
+		if TIOCNOTTY == 0 {
+			err1 = ENOSYS
+			goto childerror
+		}
 		err1 = ioctl(0, uintptr(TIOCNOTTY), 0)
 		if err1 != 0 {
 			goto childerror

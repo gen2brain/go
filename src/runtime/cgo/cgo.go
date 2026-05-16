@@ -22,6 +22,7 @@ package cgo
 #cgo aix LDFLAGS: -Wl,-berok
 #cgo solaris LDFLAGS: -lxnet
 #cgo solaris LDFLAGS: -lsocket
+#cgo haiku LDFLAGS: -lroot -lnetwork
 
 // Use -fno-stack-protector to avoid problems locating the
 // proper support functions. See issues #52919, #54313, #58385.

@@ -11,7 +11,8 @@ import "syscall"
 var (
 	testHookCanceledDial = func() {} // for golang.org/issue/16523
 
-	hostsFilePath = "/etc/hosts"
+	hostsFilePath  = "/etc/hosts"
+	resolvFilePath = "/etc/resolv.conf"
 
 	// Placeholders for socket system calls.
 	socketFunc        func(int, int, int) (int, error)  = syscall.Socket

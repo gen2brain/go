@@ -366,7 +366,7 @@ type resolverConfig struct {
 var resolvConf resolverConfig
 
 func getSystemDNSConfig() *dnsConfig {
-	resolvConf.tryUpdate("/etc/resolv.conf")
+	resolvConf.tryUpdate(resolvFilePath)
 	return resolvConf.dnsConfig.Load()
 }
 
@@ -374,7 +374,7 @@ func getSystemDNSConfig() *dnsConfig {
 func (conf *resolverConfig) init() {
 	// Set dnsConfig and lastChecked so we don't parse
 	// resolv.conf twice the first time.
-	conf.dnsConfig.Store(dnsReadConfig("/etc/resolv.conf"))
+	conf.dnsConfig.Store(dnsReadConfig(resolvFilePath))
 	conf.lastChecked = time.Now()
 
 	// Prepare ch so that only one update of resolverConfig may

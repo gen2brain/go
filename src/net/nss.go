@@ -12,9 +12,7 @@ import (
 	"time"
 )
 
-const (
-	nssConfigPath = "/etc/nsswitch.conf"
-)
+var nssConfigPath = "/etc/nsswitch.conf"
 
 var nssConfig nsswitchConfig
 
@@ -40,7 +38,7 @@ func getSystemNSS() *nssConf {
 
 // init initializes conf and is only called via conf.initOnce.
 func (conf *nsswitchConfig) init() {
-	conf.nssConf = parseNSSConfFile("/etc/nsswitch.conf")
+	conf.nssConf = parseNSSConfFile(nssConfigPath)
 	conf.lastChecked = time.Now()
 	conf.ch = make(chan struct{}, 1)
 }

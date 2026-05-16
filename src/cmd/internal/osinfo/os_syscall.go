@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build aix || linux
+//go:build aix || haiku || linux
 
-// Supporting definitions for os_uname.go on AIX and Linux.
+// Supporting definitions for os_uname.go on AIX, Haiku, and Linux.
 
 package osinfo
 

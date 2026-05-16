@@ -152,6 +152,12 @@ func setCgoAttr(ctxt *Link, file string, pkg string, directives [][]string, host
 				} else {
 					hostObjSyms[s] = struct{}{}
 				}
+				// On Haiku, all libroot imports are functions. Mark them
+				// STT_FUNC so external linking emits R_X86_64_PLT32 for
+				// PC-relative call sites instead of R_X86_64_PC32.
+				if ctxt.IsHaiku() && l.SymElfType(s) == elf.STT_NOTYPE {
+					l.SetSymElfType(s, elf.STT_FUNC)
+				}
 				havedynamic = 1
 				if lib != "" && ctxt.IsDarwin() {
 					machoadddynlib(lib, ctxt.LinkMode)

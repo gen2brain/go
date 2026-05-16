@@ -60,7 +60,7 @@ func CanUse1InsnTLS(ctxt *obj.Link) bool {
 	}
 
 	switch ctxt.Headtype {
-	case objabi.Hplan9, objabi.Hwindows:
+	case objabi.Hplan9, objabi.Hwindows, objabi.Hhaiku:
 		return false
 	case objabi.Hlinux, objabi.Hfreebsd:
 		return !ctxt.Flag_shared
@@ -159,11 +159,11 @@ func progedit(ctxt *obj.Link, p *obj.Prog, newprog obj.ProgAlloc) {
 		}
 	}
 
-	// Android and Windows use a tls offset determined at runtime. Rewrite
+	// Android, Haiku, and Windows use a tls offset determined at runtime. Rewrite
 	//	MOVQ TLS, BX
 	// to
 	//	MOVQ runtime.tls_g(SB), BX
-	if (isAndroid || ctxt.Headtype == objabi.Hwindows) &&
+	if (isAndroid || ctxt.Headtype == objabi.Hwindows || ctxt.Headtype == objabi.Hhaiku) &&
 		(p.As == AMOVQ || p.As == AMOVL) && p.From.Type == obj.TYPE_REG && p.From.Reg == REG_TLS && p.To.Type == obj.TYPE_REG && REG_AX <= p.To.Reg && p.To.Reg <= REG_R15 {
 		p.From.Type = obj.TYPE_MEM
 		p.From.Name = obj.NAME_EXTERN
@@ -201,6 +201,27 @@ func progedit(ctxt *obj.Link, p *obj.Prog, newprog obj.ProgAlloc) {
 		}
 		if p.To.Scale == 1 && p.To.Index == REG_TLS {
 			p.To.Scale = 2
+		}
+	}
+
+	// On Haiku, MOVQ off(BASE)(TLS*1), reg means an FS-relative load
+	// (because runtime.tls_g holds a byte offset into the per-thread
+	// TLS array installed at FS_BASE). Rewrite the index from REG_TLS
+	// to REG_FS so the assembler emits a real FS-prefixed access. This
+	// covers both compiler-emitted G reloads after CALL and runtime
+	// hand-written asm using the (TLS*1) form.
+	if ctxt.Headtype == objabi.Hhaiku && ctxt.Arch.Family == sys.AMD64 {
+		if p.From.Index == REG_TLS {
+			p.From.Index = REG_FS
+			if p.From.Scale == 0 {
+				p.From.Scale = 1
+			}
+		}
+		if p.To.Index == REG_TLS {
+			p.To.Index = REG_FS
+			if p.To.Scale == 0 {
+				p.To.Scale = 1
+			}
 		}
 	}
 

@@ -839,7 +839,7 @@ func (ctxt *Link) linksetup() {
 	// Also leave it enabled on Solaris which doesn't support
 	// statically linked binaries.
 	if ctxt.BuildMode == BuildModeExe {
-		if havedynamic == 0 && ctxt.HeadType != objabi.Hdarwin && ctxt.HeadType != objabi.Hsolaris {
+		if havedynamic == 0 && ctxt.HeadType != objabi.Hdarwin && ctxt.HeadType != objabi.Hsolaris && ctxt.HeadType != objabi.Hhaiku {
 			*FlagD = true
 		}
 	}
@@ -1545,6 +1545,10 @@ func (ctxt *Link) hostlink() {
 		// ld still need -bbigtoc in order to allow larger TOC.
 		argv = append(argv, "-mcmodel=large")
 		argv = append(argv, "-Wl,-bbigtoc")
+	case objabi.Hhaiku:
+		// Haiku's libc and POSIX layer live in libroot; sockets are in libnetwork.
+		argv = append(argv, "-lroot")
+		argv = append(argv, "-lnetwork")
 	}
 
 	// On PPC64, verify the external toolchain supports Power10. This is needed when

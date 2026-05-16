@@ -2554,6 +2554,7 @@ func prefixof(ctxt *obj.Link, a *obj.Addr) int {
 
 			case objabi.Hdragonfly,
 				objabi.Hfreebsd,
+				objabi.Hhaiku,
 				objabi.Hnetbsd,
 				objabi.Hopenbsd,
 				objabi.Hsolaris:
@@ -2591,6 +2592,15 @@ func prefixof(ctxt *obj.Link, a *obj.Addr) int {
 			if ctxt.Arch.Family == sys.I386 {
 				return 0x65 // GS
 			}
+			return 0x64 // FS
+		}
+		if ctxt.Headtype == objabi.Hhaiku {
+			// Haiku puts each thread's TLS array at FS_BASE; the byte offset
+			// of g within that array is in runtime.tls_g (filled in by
+			// haikuTlsInit). The 2-instruction sequence
+			//     MOVQ runtime.tls_g(SB), BX
+			//     MOVQ CX, 0(BX)(TLS*1)
+			// must encode a real FS-relative store, not a R_TLS_LE relocation.
 			return 0x64 // FS
 		}
 
@@ -3729,7 +3739,7 @@ func (ab *AsmBuf) asmandsz(ctxt *obj.Link, cursym *obj.LSym, p *obj.Prog, a *obj
 
 	if REG_AX <= base && base <= REG_R15 {
 		if a.Index == REG_TLS && !ctxt.Flag_shared && !isAndroid &&
-			ctxt.Headtype != objabi.Hwindows {
+			ctxt.Headtype != objabi.Hwindows && ctxt.Headtype != objabi.Hhaiku {
 			rel = obj.Reloc{}
 			rel.Type = objabi.R_TLS_LE
 			rel.Siz = 4
@@ -5174,7 +5184,8 @@ func (ab *AsmBuf) doasm(ctxt *obj.Link, cursym *obj.LSym, p *obj.Prog) {
 						ab.Put1(0x8B)
 						ab.asmand(ctxt, cursym, p, &pp.From, &p.To)
 
-					case objabi.Hsolaris: // TODO(rsc): Delete Hsolaris from list. Should not use this code. See progedit in obj6.c.
+					case objabi.Hsolaris, // TODO(rsc): Delete Hsolaris from list. Should not use this code. See progedit in obj6.c.
+						objabi.Hhaiku: // Haiku stores the per-thread TLS base at 0(FS), like Solaris.
 						// TLS base is 0(FS).
 						pp.From = p.From
 

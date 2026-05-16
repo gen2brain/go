@@ -313,11 +313,25 @@ func adddynrel(target *ld.Target, ldr *loader.Loader, syms *ld.ArchSyms, s loade
 			}
 			ldr.Errorf(s, "unexpected R_PCREL reloc for dynamic symbol %s: not preceded by LEAQ instruction", ldr.SymName(targ))
 		}
+		if targType == sym.SDYNIMPORT && ldr.SymType(s).IsText() && target.IsHaiku() {
+			// On Haiku libroot symbols are accessed via LEAQ libc_X(SB), AX.
+			// In external linking the PC-relative reloc is emitted as
+			// R_X86_64_PLT32 against the symbol; the host linker creates the
+			// PLT entry. In internal linking, retarget the relocation at the
+			// internal PLT entry the same way as the R_ADDR path below.
+			if target.IsInternal() {
+				addpltsym(target, ldr, syms, targ)
+				su := ldr.MakeSymbolUpdater(s)
+				su.SetRelocSym(rIdx, syms.PLT)
+				su.SetRelocAdd(rIdx, r.Add()+int64(ldr.SymPlt(targ)))
+			}
+			return true
+		}
 
 	case objabi.R_ADDR:
 		if ldr.SymType(s).IsText() && target.IsElf() {
 			su := ldr.MakeSymbolUpdater(s)
-			if target.IsSolaris() {
+			if target.IsSolaris() || target.IsHaiku() {
 				addpltsym(target, ldr, syms, targ)
 				su.SetRelocSym(rIdx, syms.PLT)
 				su.SetRelocAdd(rIdx, r.Add()+int64(ldr.SymPlt(targ)))

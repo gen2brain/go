@@ -148,6 +148,7 @@ type ELFArch struct {
 	Linuxdynld     string
 	LinuxdynldMusl string
 	Freebsddynld   string
+	Haikudynld     string
 	Netbsddynld    string
 	Openbsddynld   string
 	Dragonflydynld string
@@ -1851,6 +1852,9 @@ func asmbElf(ctxt *Link) {
 
 			case objabi.Hfreebsd:
 				interpreter = thearch.ELF.Freebsddynld
+
+			case objabi.Hhaiku:
+				interpreter = thearch.ELF.Haikudynld
 
 			case objabi.Hnetbsd:
 				interpreter = thearch.ELF.Netbsddynld

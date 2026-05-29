@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	hostsFilePath = windows.GetSystemDirectory() + "/Drivers/etc/hosts"
+	hostsFilePath  = windows.GetSystemDirectory() + "/Drivers/etc/hosts"
+	resolvFilePath = "/etc/resolv.conf"
 
 	// Placeholders for socket system calls.
 	wsaSocketFunc func(int32, int32, int32, *syscall.WSAProtocolInfo, uint32, uint32) (syscall.Handle, error) = windows.WSASocket

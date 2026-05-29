@@ -5,5 +5,6 @@
 package net
 
 var (
-	hostsFilePath = "/etc/hosts"
+	hostsFilePath  = "/etc/hosts"
+	resolvFilePath = "/etc/resolv.conf"
 )

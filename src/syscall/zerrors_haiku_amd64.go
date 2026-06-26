@@ -301,6 +301,7 @@ const (
 	E2BIG           = Errno(7)
 	ENOEXEC         = Errno(8)
 	EBADF           = Errno(9)
+	EBADFD          = EBADF // no distinct Haiku errno; matches the BSD convention
 	ECHILD          = Errno(10)
 	EAGAIN          = Errno(11)
 	EWOULDBLOCK     = EAGAIN

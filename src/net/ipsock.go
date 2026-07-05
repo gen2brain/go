@@ -294,13 +294,7 @@ func (r *Resolver) internetAddrList(ctx context.Context, net, addr string) (addr
 	// IPv6 such that it can bind on "::" (IPv6unspecified)
 	// but not connect back to that same address, fall
 	// back to dialing 0.0.0.0.
-	//
-	// Only do this where IPv4-mapped IPv6 is supported: there a wildcard
-	// listen on the appended 0.0.0.0 becomes a dual-stack AF_INET6 socket
-	// that still serves IPv6. Without it (e.g. Haiku, OpenBSD, DragonFly,
-	// where IPV6_V6ONLY is forced on) the appended IPv4 address would make
-	// a "[::]" listen bind IPv4-only, dropping IPv6.
-	if supportsIPv4map() && len(ips) == 1 && ips[0].IP.Equal(IPv6unspecified) {
+	if len(ips) == 1 && ips[0].IP.Equal(IPv6unspecified) {
 		ips = append(ips, IPAddr{IP: IPv4zero})
 	}
 

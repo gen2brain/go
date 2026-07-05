@@ -392,7 +392,7 @@ func write1(fd uintptr, p unsafe.Pointer, n int32) int32 {
 	if gp != nil {
 		r, errno := syscall3(&libc_write, uintptr(fd), uintptr(p), uintptr(n))
 		if int32(r) < 0 {
-			return -int32(errno)
+			return -int32(haikuErrnoToPosix(errno))
 		}
 		return int32(r)
 	}
@@ -403,7 +403,7 @@ func write1(fd uintptr, p unsafe.Pointer, n int32) int32 {
 func read(fd int32, p unsafe.Pointer, n int32) int32 {
 	r, errno := syscall3(&libc_read, uintptr(fd), uintptr(p), uintptr(n))
 	if int32(r) < 0 {
-		return -int32(errno)
+		return -int32(haikuErrnoToPosix(errno))
 	}
 	return int32(r)
 }
@@ -430,10 +430,13 @@ func pipe() (r, w int32, errno int32) {
 //go:nosplit
 func mmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uint32) (unsafe.Pointer, int) {
 	r, err0 := syscall6(&libc_mmap, uintptr(addr), uintptr(n), uintptr(prot), uintptr(flags), uintptr(fd), uintptr(off))
+	// err0 holds a raw libroot errno (an INT_MIN+N value stored
+	// zero-extended); sign-extend it so callers see the negative B_* code
+	// that runtime's _E* constants use.
 	if r == ^uintptr(0) {
-		return nil, int(err0)
+		return nil, int(int32(err0))
 	}
-	return unsafe.Pointer(r), int(err0)
+	return unsafe.Pointer(r), int(int32(err0))
 }
 
 //go:nosplit
@@ -698,5 +701,5 @@ func signalM(mp *m, sig int) {
 //go:nosplit
 func fcntl(fd, cmd, arg int32) (int32, int32) {
 	r, errno := syscall3(&libc_fcntl, uintptr(fd), uintptr(cmd), uintptr(arg))
-	return int32(r), int32(errno)
+	return int32(r), int32(haikuErrnoToPosix(errno))
 }

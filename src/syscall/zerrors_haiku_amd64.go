@@ -251,6 +251,8 @@ const (
 	MSG_BCAST     = 0x100
 	MSG_MCAST     = 0x200
 	MSG_EOF       = 0x400
+	MSG_NOSIGNAL      = 0x800
+	MSG_CMSG_CLOEXEC  = 0x1000
 
 	// Wait flags.
 	WNOHANG   = 0x1

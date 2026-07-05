@@ -326,15 +326,92 @@ func sigdelset(mask *sigset, i int) {
 	*mask &^= 1 << (uint(i) - 1)
 }
 
-// CPU profiling is disabled on Haiku: ITIMER_PROF + multi-M SIGPROF
-// delivery races the kernel's signal-handler-reset path and panics
-// the kernel. pprof.StartCPUProfile produces no samples here.
+// State for the CPU profiling thread (profileLoop): profileLoopStarted
+// guards its one-time creation, profileHz is the current sampling rate,
+// and profileWait/profileNote park it while profiling is disabled.
+var (
+	profileLoopStarted uint32
+	profileHz          uint32
+	profileWait        uint32
+	profileNote        note
+)
+
+// CPU profiling on Haiku is driven by a dedicated OS thread rather than by
+// setitimer(ITIMER_PROF). Haiku's ITIMER_PROF is a team timer whose SIGPROF
+// is delivered to an arbitrary thread, not the one consuming CPU, and a
+// per-thread CLOCK_THREAD_CPUTIME_ID timer does not reach a thread that
+// stays in user space (the kernel only delivers its pending signal at the
+// next kernel entry). A signal sent from another thread, however, is forced
+// in via an inter-processor interrupt, so profileLoop periodically signals
+// each on-CPU M, which then samples its own stack in the SIGPROF handler.
+// This mirrors the profiling thread used on Windows.
 func setProcessCPUProfiler(hz int32) {
-	_ = hz
+	if hz != 0 {
+		if atomic.Cas(&handlingSig[_SIGPROF], 0, 1) {
+			h := getsig(_SIGPROF)
+			if h == _SIG_DFL {
+				h = _SIG_IGN
+			}
+			atomic.Storeuintptr(&fwdSig[_SIGPROF], h)
+			setsig(_SIGPROF, abi.FuncPCABIInternal(sighandler))
+		}
+		atomic.Store(&profileHz, uint32(hz))
+		if atomic.Cas(&profileLoopStarted, 0, 1) {
+			newm(profileLoop, nil, -1)
+		}
+		if atomic.Cas(&profileWait, 1, 0) {
+			notewakeup(&profileNote)
+		}
+	} else {
+		atomic.Store(&profileHz, 0)
+		if !sigInstallGoHandler(_SIGPROF) {
+			if atomic.Cas(&handlingSig[_SIGPROF], 1, 0) {
+				h := atomic.Loaduintptr(&fwdSig[_SIGPROF])
+				setsig(_SIGPROF, h)
+			}
+		}
+	}
 }
 
 func setThreadCPUProfiler(hz int32) {
-	_ = hz
+	getg().m.profilehz = hz
+}
+
+// profileLoop runs on its own M and delivers SIGPROF to every M that is
+// currently running Go code, at the configured sampling rate. It lives for
+// the remainder of the process once profiling has been enabled once, and
+// parks on profileNote while profiling is disabled.
+func profileLoop() {
+	for {
+		hz := int32(atomic.Load(&profileHz))
+		if hz > 0 {
+			usleep(uint32(1000000 / hz))
+			if atomic.Load(&profileHz) == 0 {
+				continue
+			}
+
+			self := getg().m
+			for mp := (*m)(atomic.Loadp(unsafe.Pointer(&allm))); mp != nil; mp = mp.alllink {
+				if mp == self || mp.procid == 0 || mp.profilehz == 0 || mp.blocked {
+					continue
+				}
+				signalM(mp, _SIGPROF)
+			}
+			continue
+		}
+
+		// Profiling is off; park until setProcessCPUProfiler re-enables it.
+		// profileWait tells the waker a wakeup is needed; the CAS on the
+		// waker side ensures notewakeup is paired with exactly one park.
+		noteclear(&profileNote)
+		atomic.Store(&profileWait, 1)
+		if atomic.Load(&profileHz) != 0 {
+			atomic.Store(&profileWait, 0)
+			continue
+		}
+		notesleep(&profileNote)
+		atomic.Store(&profileWait, 0)
+	}
 }
 
 //go:nosplit

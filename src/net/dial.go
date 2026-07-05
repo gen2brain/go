@@ -882,7 +882,7 @@ func (lc *ListenConfig) Listen(ctx context.Context, network, address string) (Li
 		address:      address,
 	}
 	var l Listener
-	la := addrs.first(isIPv4)
+	la := addrs.forResolve(network, address)
 	switch la := la.(type) {
 	case *TCPAddr:
 		if sl.MultipathTCP() {
@@ -919,7 +919,7 @@ func (lc *ListenConfig) ListenPacket(ctx context.Context, network, address strin
 		address:      address,
 	}
 	var c PacketConn
-	la := addrs.first(isIPv4)
+	la := addrs.forResolve(network, address)
 	switch la := la.(type) {
 	case *UDPAddr:
 		c, err = sl.listenUDP(ctx, la)

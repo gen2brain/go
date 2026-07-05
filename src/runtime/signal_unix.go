@@ -651,6 +651,15 @@ func sighandler(sig uint32, info *siginfo, ctxt unsafe.Pointer, gp *g) {
 	mp := gsignal.m
 	c := &sigctxt{info, ctxt}
 
+	// Haiku reports a general-protection fault (for example, accessing a
+	// non-canonical address) as SIGILL with si_code ILL_PRVOPC (0xe) rather
+	// than SIGSEGV. Treat that as a memory fault so nil-pointer recovery and
+	// debug.SetPanicOnFault behave as on other systems. A genuine illegal
+	// instruction reports ILL_ILLOPC and is left alone.
+	if GOOS == "haiku" && sig == _SIGILL && c.sigcode() == 0xe {
+		sig = _SIGSEGV
+	}
+
 	// Cgo TSAN (not the Go race detector) intercepts signals and calls the
 	// signal handler at a later time. When the signal handler is called, the
 	// memory may have changed, but the signal context remains old. The

@@ -685,6 +685,10 @@ func TestIPv6WriteMsgUDPAddrPortTargetAddrIPVersion(t *testing.T) {
 		// OpenBSD's IPv6 sockets are always IPv6-only, according to the man page:
 		// https://man.openbsd.org/ip6#IPV6_V6ONLY
 		t.Skipf("skipping on %v", runtime.GOOS)
+	case "haiku":
+		// Haiku does not support IPv4-mapped IPv6 (IPV6_V6ONLY is forced on),
+		// so a single socket cannot address both IPv4 and IPv6 targets.
+		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
 	conn, err := ListenUDP("udp", nil)

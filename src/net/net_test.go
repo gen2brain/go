@@ -20,6 +20,11 @@ func TestCloseRead(t *testing.T) {
 	switch runtime.GOOS {
 	case "plan9":
 		t.Skipf("not supported on %s", runtime.GOOS)
+	case "haiku":
+		// On Haiku, read() after shutdown(SHUT_RD) returns EAGAIN instead
+		// of 0/EOF, and poll reports the same POLLIN|POLLHUP as a normal
+		// graceful close, so the read blocks forever. Kernel bug.
+		t.Skipf("not supported on %s", runtime.GOOS)
 	}
 	t.Parallel()
 
@@ -545,6 +550,12 @@ func TestCloseUnblocksReadUDP(t *testing.T) {
 
 // Issue 24808: verify that ECONNRESET is not temporary for read.
 func TestNotTemporaryRead(t *testing.T) {
+	if runtime.GOOS == "haiku" {
+		// On Haiku, a peer RST is not surfaced to the reader: read()
+		// returns EAGAIN and poll reports no events, so the read blocks
+		// forever instead of returning a connection-reset error. Kernel bug.
+		t.Skip("not supported on haiku")
+	}
 	t.Parallel()
 
 	ln := newLocalListener(t, "tcp")

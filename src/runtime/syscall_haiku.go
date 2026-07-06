@@ -46,6 +46,30 @@ func syscall_syscall6(fn, nargs, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2, err ui
 	return c.r1, c.r2, c.err
 }
 
+// syscall_syscall7 is like syscall_syscall6 with one more argument. It is used
+// on 386, where a 64-bit off_t (mmap) is passed as two of the seven words.
+// asmsyscall6 marshals n words onto the C stack, so seven fit; on amd64 off_t
+// is a single register argument and this path is unused.
+//
+//go:nosplit
+//go:cgo_unsafe_args
+//go:linkname syscall_syscall7
+func syscall_syscall7(fn, nargs, a1, a2, a3, a4, a5, a6, a7 uintptr) (r1, r2, err uintptr) {
+	c := libcall{
+		fn:   fn,
+		n:    nargs,
+		args: uintptr(unsafe.Pointer(&a1)),
+	}
+
+	entersyscallblock()
+	asmcgocall(unsafe.Pointer(&asmsyscall6), unsafe.Pointer(&c))
+	exitsyscall()
+	if c.err != 0 {
+		c.err = haikuErrnoToPosix(c.err)
+	}
+	return c.r1, c.r2, c.err
+}
+
 //go:nosplit
 //go:cgo_unsafe_args
 //go:linkname syscall_rawSyscall6

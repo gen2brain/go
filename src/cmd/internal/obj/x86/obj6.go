@@ -50,7 +50,8 @@ func CanUse1InsnTLS(ctxt *obj.Link) bool {
 
 	if ctxt.Arch.Family == sys.I386 {
 		switch ctxt.Headtype {
-		case objabi.Hlinux,
+		case objabi.Hhaiku,
+			objabi.Hlinux,
 			objabi.Hplan9,
 			objabi.Hwindows:
 			return false
@@ -209,8 +210,9 @@ func progedit(ctxt *obj.Link, p *obj.Prog, newprog obj.ProgAlloc) {
 	// TLS array installed at FS_BASE). Rewrite the index from REG_TLS
 	// to REG_FS so the assembler emits a real FS-prefixed access. This
 	// covers both compiler-emitted G reloads after CALL and runtime
-	// hand-written asm using the (TLS*1) form.
-	if ctxt.Headtype == objabi.Hhaiku && ctxt.Arch.Family == sys.AMD64 {
+	// hand-written asm using the (TLS*1) form. Haiku x86 also puts the
+	// TLS array at FS_BASE (movl %fs:(,index,4)), so 386 uses FS too.
+	if ctxt.Headtype == objabi.Hhaiku && (ctxt.Arch.Family == sys.AMD64 || ctxt.Arch.Family == sys.I386) {
 		if p.From.Index == REG_TLS {
 			p.From.Index = REG_FS
 			if p.From.Scale == 0 {

@@ -157,6 +157,12 @@ notintel:
 	JZ	bad_proc
 
 nocpuinfo:
+#ifdef GOOS_haiku
+	// Allocate the per-process TLS slot via libroot's tls_allocate before
+	// any FS-relative TLS access. Doing it here covers both the cgo path
+	// (which skips needtls) and the non-cgo path. haikuTlsInit preserves BP.
+	CALL	runtime·haikuTlsInit(SB)
+#endif
 	// if there is an _cgo_init, call it to let it
 	// initialize and to set up GS.  if not,
 	// we set up GS ourselves.
@@ -201,6 +207,11 @@ needtls:
 #endif
 #ifdef GOOS_plan9
 	// skip runtime·ldt0setup(SB) and tls test on Plan 9 in all cases
+	JMP	ok
+#endif
+#ifdef GOOS_haiku
+	// haikuTlsInit ran above in nocpuinfo; the FS-relative slot is ready,
+	// so skip the GS/LDT setup and the m_tls-based tls test.
 	JMP	ok
 #endif
 

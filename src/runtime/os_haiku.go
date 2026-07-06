@@ -52,12 +52,7 @@ func semasleep(ns int64) int32 {
 		if clock_gettime(_CLOCK_REALTIME, &ts) != 0 {
 			throw("clock_gettime")
 		}
-		ts.tv_sec += ns / 1e9
-		ts.tv_nsec += ns % 1e9
-		if ts.tv_nsec >= 1e9 {
-			ts.tv_sec++
-			ts.tv_nsec -= 1e9
-		}
+		ts.setNsec(int64(ts.tv_sec)*1e9 + int64(ts.tv_nsec) + ns)
 
 		if r, err := sem_timedwait((*semt)(unsafe.Pointer(mp.waitsema)), &ts); r != 0 {
 			if err == _ETIMEDOUT || err == _EAGAIN || err == _EINTR {
@@ -441,7 +436,7 @@ func nanotime1() int64 {
 	if clock_gettime(_CLOCK_MONOTONIC, tp) != 0 {
 		throw("syscall clock_gettime failed")
 	}
-	return tp.tv_sec*1e9 + tp.tv_nsec
+	return int64(tp.tv_sec)*1e9 + int64(tp.tv_nsec)
 }
 
 func walltime() (sec int64, nsec int32) {
@@ -449,7 +444,7 @@ func walltime() (sec int64, nsec int32) {
 	if clock_gettime(_CLOCK_REALTIME, ts) != 0 {
 		throw("syscall clock_gettime failed")
 	}
-	return ts.tv_sec, int32(ts.tv_nsec)
+	return int64(ts.tv_sec), int32(ts.tv_nsec)
 }
 
 //go:nosplit

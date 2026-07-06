@@ -252,6 +252,17 @@ func adddynrel(target *ld.Target, ldr *loader.Loader, syms *ld.ArchSyms, s loade
 		return true
 
 	case objabi.R_ADDR:
+		if ldr.SymType(s).IsText() && target.IsElf() && target.IsHaiku() {
+			// libroot functions are referenced from runtime asm via
+			// LEAL libc_X(SB), which lowers to an absolute R_ADDR against
+			// the dynamic import. Route it through the internal PLT so the
+			// address resolves to the runtime_loader-provided stub.
+			addpltsym(target, ldr, syms, targ)
+			su := ldr.MakeSymbolUpdater(s)
+			su.SetRelocSym(rIdx, syms.PLT)
+			su.SetRelocAdd(rIdx, r.Add()+int64(ldr.SymPlt(targ)))
+			return true
+		}
 		if !ldr.SymType(s).IsDATA() {
 			break
 		}

@@ -243,7 +243,7 @@ noswitch:
 	CALL	AX
 	RET
 
-// Runs on OS stack. duration (in µs units) is in DI.
+// Runs on OS stack. duration (in microseconds) is in DI.
 // The SysV ABI requires RSP to be 16-byte aligned at every CALL site
 // (so the callee sees RSP%16 == 8). Go's calling convention does not
 // always provide that when calling these ABI0 trampolines, so we realign

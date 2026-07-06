@@ -378,14 +378,6 @@ var mapper = &mmapper{
 // mmap is exposed via linkname (see linkname_unix.go) for hall-of-shame
 // third-party packages. The signature must not change. See
 // go.dev/issue/67401.
-func mmap(addr uintptr, length uintptr, prot, flags, fd int, offset int64) (uintptr, error) {
-	r0, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_mmap)), 6,
-		addr, length, uintptr(prot), uintptr(flags), uintptr(fd), uintptr(offset))
-	if e1 != 0 {
-		return 0, errnoErr(e1)
-	}
-	return r0, nil
-}
 
 func munmap(addr uintptr, length uintptr) error {
 	_, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_munmap)), 2, addr, length, 0, 0, 0, 0)
@@ -615,7 +607,7 @@ type Tms struct{}
 //	bits  8..15 termination signal (WIFSIGNALED when nonzero)
 //	bit   16    "core dumped" indicator (WIFCORED)
 //	bit   17    "continued" indicator (WIFCONTINUED)
-//	bits 16..23 stop signal (WIFSTOPPED) — note this OVERLAPS the cored/
+//	bits 16..23 stop signal (WIFSTOPPED); note this overlaps the cored/
 //	            continued bits, so we must order our checks: a status that
 //	            is signaled-with-core also has bits 16..23 nonzero.
 type WaitStatus uint32
@@ -766,8 +758,6 @@ const (
 
 const SYS_EXECVE = 0
 
-func setTimespec(sec, nsec int64) Timespec { return Timespec{Sec: sec, Nsec: nsec} }
-func setTimeval(sec, usec int64) Timeval   { return Timeval{Sec: sec, Usec: int32(usec)} }
 
 // readlen wraps read for exec_unix.go.
 func readlen(fd int, buf *byte, nbuf int) (int, error) {

@@ -2400,5 +2400,13 @@ func elfadddynsym(ldr *loader.Loader, target *Target, syms *ArchSyms, s loader.S
 		} else {
 			d.AddUint16(target.Arch, 1)
 		}
+
+		dil := ldr.SymDynimplib(s)
+
+		if !cgoeDynamic && dil != "" && !seenlib[dil] {
+			du := ldr.MakeSymbolUpdater(syms.Dynamic)
+			Elfwritedynent(target.Arch, du, elf.DT_NEEDED, uint64(dstru.Addstring(dil)))
+			seenlib[dil] = true
+		}
 	}
 }

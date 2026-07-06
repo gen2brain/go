@@ -299,12 +299,15 @@ func slowdodiv(n, d uint64) (q, r uint64) {
 //
 //	0 = single precision a.k.a. float32
 //	2 = double precision a.k.a. float64
+//	3 = extended precision a.k.a. 80-bit
 //
 // Bits 10-11 are the rounding mode:
 //
 //	0 = round to nearest (even on a tie)
 //	3 = round toward zero
+//
+// controlWord64, loaded by asminit as the ambient precision, is defined
+// per platform (see fpu_386.go and fpu_haiku_386.go).
 var (
-	controlWord64      uint16 = 0x3f + 2<<8 + 0<<10
 	controlWord64trunc uint16 = 0x3f + 2<<8 + 3<<10
 )

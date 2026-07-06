@@ -314,6 +314,22 @@ func setSignalstackSP(s *stackt, sp uintptr) {
 
 //go:nosplit
 func (c *sigctxt) fixsigcode(sig uint32) {
+	// Haiku delivers hardware memory faults with si_code SI_USER instead of a
+	// SEGV_/BUS_ fault code. Go's sigFromUser treats SI_USER as a signal sent
+	// by kill, so a genuine fault would not be turned into a recoverable
+	// panic (debug.SetPanicOnFault, nil-pointer recovery). Rewrite the code
+	// for the fault signals so the fault machinery runs. Go programs do not
+	// receive kill(SIGSEGV)/kill(SIGBUS) in normal operation.
+	switch sig {
+	case _SIGSEGV:
+		if c.sigcode() == _SI_USER {
+			c.set_sigcode(_SEGV_MAPERR)
+		}
+	case _SIGBUS:
+		if c.sigcode() == _SI_USER {
+			c.set_sigcode(_BUS_ADRERR)
+		}
+	}
 }
 
 //go:nosplit

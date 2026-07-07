@@ -36,6 +36,14 @@
 #define MRS_TPIDR_R0 WORD $0xd53bd040 // MRS TPIDR_EL0, R0
 #endif
 
+#ifdef GOOS_haiku
+// Haiku stores the per-thread TLS array at TPIDR_EL0. runtime·tls_g holds the
+// byte offset (slot index * 8) of the G pointer within that array, filled in
+// at startup by runtime·haikuTlsInit via libroot's tls_allocate().
+#define TLSG_IS_VARIABLE
+#define MRS_TPIDR_R0 WORD $0xd53bd040 // MRS TPIDR_EL0, R0
+#endif
+
 #ifdef GOOS_windows
 #define TLS_windows
 #endif

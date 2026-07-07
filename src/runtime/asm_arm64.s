@@ -140,6 +140,13 @@ TEXT runtime·rt0_go(SB),NOSPLIT|TOPFRAME,$0
 	MOVD	R0, (g_stack+stack_lo)(g)
 	MOVD	R7, (g_stack+stack_hi)(g)
 
+#ifdef GOOS_haiku
+	// Allocate the per-process TLS slot via libroot's tls_allocate before
+	// any TPIDR-relative TLS access (save_g/load_g below). runtime·tls_g
+	// holds the resulting byte offset.
+	CALL	runtime·haikuTlsInit(SB)
+#endif
+
 	// if there is a _cgo_init, call it using the gcc ABI.
 	MOVD	_cgo_init(SB), R12
 	CBZ	R12, nocgo

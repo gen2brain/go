@@ -1778,6 +1778,7 @@ var cgoEnabled = map[string]bool{
 	"freebsd/riscv64": true,
 	"haiku/386":       true,
 	"haiku/amd64":     true,
+	"haiku/arm64":     true,
 	"illumos/amd64":   true,
 	"linux/386":       true,
 	"linux/amd64":     true,

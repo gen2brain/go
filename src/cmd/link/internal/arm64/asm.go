@@ -338,6 +338,44 @@ func adddynrel(target *ld.Target, ldr *loader.Loader, syms *ld.ArchSyms, s loade
 		return true
 
 	case objabi.R_ADDRARM64:
+		if targType == sym.SDYNIMPORT && ldr.SymType(s).IsText() && target.IsHaiku() {
+			// libroot functions are referenced (from runtime asm via
+			// MOVD $libc_X(SB), Rn, and from Go via &libc_X) as an
+			// R_ADDRARM64 (adrp+add) against the dynamic import. Haiku
+			// executables are ELF DYN, so the address can't bind via a
+			// PC-relative adrp+add; rewrite it to a GOT load (adrp+ldr) and
+			// let the GOT entry be filled by the dynamic linker. This covers
+			// both internal linking (GLOB_DAT dynamic reloc resolved by
+			// runtime_loader) and external linking (host linker via GOTPCREL).
+			if r.Add() != 0 {
+				ldr.Errorf(s, "unexpected nonzero addend for dynamic symbol %s", ldr.SymName(targ))
+				return false
+			}
+			su := ldr.MakeSymbolUpdater(s)
+			data := ldr.Data(s)
+			off := r.Off()
+			if int(off+8) > len(data) {
+				ldr.Errorf(s, "unexpected R_ADDRARM64 reloc for dynamic symbol %s", ldr.SymName(targ))
+				return false
+			}
+			o := target.Arch.ByteOrder.Uint32(data[off+4:])
+			if o>>24 == 0x91 { // add
+				o = (0xf9 << 24) | 1<<22 | (o & (1<<22 - 1)) // ldr
+				su.MakeWritable()
+				su.SetUint32(target.Arch, int64(off+4), o)
+				if target.IsInternal() {
+					ld.AddGotSym(target, ldr, syms, targ, uint32(elf.R_AARCH64_GLOB_DAT))
+					su.SetRelocSym(rIdx, syms.GOT)
+					su.SetRelocAdd(rIdx, int64(ldr.SymGot(targ)))
+					su.SetRelocType(rIdx, objabi.R_ARM64_PCREL_LDST64)
+				} else {
+					su.SetRelocType(rIdx, objabi.R_ARM64_GOTPCREL)
+				}
+				return true
+			}
+			ldr.Errorf(s, "unexpected R_ADDRARM64 reloc for dynamic symbol %s", ldr.SymName(targ))
+			return false
+		}
 		if targType == sym.SDYNIMPORT && ldr.SymType(s).IsText() && target.IsDarwin() {
 			// Loading the address of a dynamic symbol. Rewrite to use GOT.
 			// turn MOVD $sym (adrp+add) into MOVD sym@GOT (adrp+ldr)
@@ -372,6 +410,16 @@ func adddynrel(target *ld.Target, ldr *loader.Loader, syms *ld.ArchSyms, s loade
 		}
 
 	case objabi.R_ADDR:
+		if ldr.SymType(s).IsText() && target.IsElf() && target.IsHaiku() {
+			// Absolute reference to a libroot function from runtime asm;
+			// route it through the internal PLT so it resolves to the
+			// runtime_loader-provided stub.
+			addpltsym(target, ldr, syms, targ)
+			su := ldr.MakeSymbolUpdater(s)
+			su.SetRelocSym(rIdx, syms.PLT)
+			su.SetRelocAdd(rIdx, r.Add()+int64(ldr.SymPlt(targ)))
+			return true
+		}
 		if ldr.SymType(s).IsText() && target.IsElf() {
 			// The code is asking for the address of an external
 			// function. We provide it with the address of the

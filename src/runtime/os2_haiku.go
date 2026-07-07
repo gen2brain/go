@@ -19,50 +19,10 @@ import (
 //go:cgo_export_dynamic _gSharedObjectHaikuVersion
 
 // Syscalls
-
-//go:cgo_import_dynamic libc__errnop _errnop "libroot.so"
-//go:cgo_import_dynamic libc_clock_gettime clock_gettime "libroot.so"
-//go:cgo_import_dynamic libc_close close "libroot.so"
-//go:cgo_import_dynamic libc_exit _exit "libroot.so"
-//go:cgo_import_dynamic libc_fcntl fcntl "libroot.so"
-//go:cgo_import_dynamic libc_find_thread find_thread "libroot.so"
-//go:cgo_import_dynamic libc_getpid getpid "libroot.so"
-//go:cgo_import_dynamic libc_kill kill "libroot.so"
-//go:cgo_import_dynamic libc_madvise madvise "libroot.so"
-//go:cgo_import_dynamic libc_malloc malloc "libroot.so"
-//go:cgo_import_dynamic libc_mmap mmap "libroot.so"
-//go:cgo_import_dynamic libc_mprotect mprotect "libroot.so"
-//go:cgo_import_dynamic libc_munmap munmap "libroot.so"
-//go:cgo_import_dynamic libc_open open "libroot.so"
-//go:cgo_import_dynamic libc_pipe pipe "libroot.so"
-//go:cgo_import_dynamic libc_poll poll "libroot.so"
-//go:cgo_import_dynamic libc_raise raise "libroot.so"
-//go:cgo_import_dynamic libc_read read "libroot.so"
-//go:cgo_import_dynamic libc_sched_yield sched_yield "libroot.so"
-//go:cgo_import_dynamic libc_sem_init sem_init "libroot.so"
-//go:cgo_import_dynamic libc_sem_post sem_post "libroot.so"
-//go:cgo_import_dynamic libc_sem_timedwait sem_timedwait "libroot.so"
-//go:cgo_import_dynamic libc_sem_wait sem_wait "libroot.so"
-//go:cgo_import_dynamic libc_send_signal send_signal "libroot.so"
-//go:cgo_import_dynamic libc_setitimer setitimer "libroot.so"
-//go:cgo_import_dynamic libc_shutdown shutdown "libnetwork.so"
-//go:cgo_import_dynamic libc_sigaction sigaction#LIBROOT_1_ALPHA4 "libroot.so"
-//go:cgo_import_dynamic libc_sigaltstack sigaltstack "libroot.so"
-//go:cgo_import_dynamic libc_sigprocmask sigprocmask#LIBROOT_1_ALPHA4 "libroot.so"
-//go:cgo_import_dynamic libc_sysconf sysconf#LIBROOT_1_ALPHA4 "libroot.so"
-//go:cgo_import_dynamic libc_usleep usleep "libroot.so"
-//go:cgo_import_dynamic libc_write write "libroot.so"
-//go:cgo_import_dynamic libc_getuid getuid "libroot.so"
-//go:cgo_import_dynamic libc_geteuid geteuid "libroot.so"
-//go:cgo_import_dynamic libc_getgid getgid "libroot.so"
-//go:cgo_import_dynamic libc_getegid getegid "libroot.so"
-//go:cgo_import_dynamic libc_pthread_attr_destroy pthread_attr_destroy "libroot.so"
-//go:cgo_import_dynamic libc_pthread_attr_init pthread_attr_init "libroot.so"
-//go:cgo_import_dynamic libc_pthread_attr_setstacksize pthread_attr_setstacksize "libroot.so"
-//go:cgo_import_dynamic libc_pthread_attr_setdetachstate pthread_attr_setdetachstate "libroot.so"
-//go:cgo_import_dynamic libc_pthread_create pthread_create "libroot.so"
-//go:cgo_import_dynamic libc_pthread_self pthread_self "libroot.so"
-//go:cgo_import_dynamic libc_tls_allocate tls_allocate "libroot.so"
+//
+// The cgo_import_dynamic directives binding these libc_* names to libroot
+// symbols live in os2_haiku_import.go (and, on arm64, os2_haiku_import_arm64.go,
+// which imports them under _dyn names for the trampolines in sys_haiku_arm64.s).
 
 //go:linkname libc__errnop libc__errnop
 //go:linkname libc_clock_gettime libc_clock_gettime

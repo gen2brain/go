@@ -10,19 +10,6 @@ package runtime
 
 import _ "unsafe" // for go:linkname
 
-//go:cgo_import_dynamic libc_chdir chdir "libroot.so"
-//go:cgo_import_dynamic libc_chroot chroot "libroot.so"
-//go:cgo_import_dynamic libc_dup2 dup2 "libroot.so"
-//go:cgo_import_dynamic libc_execve execve "libroot.so"
-//go:cgo_import_dynamic libc_fork fork "libroot.so"
-//go:cgo_import_dynamic libc_ioctl ioctl "libroot.so"
-//go:cgo_import_dynamic libc_setgid setgid "libroot.so"
-//go:cgo_import_dynamic libc_setgroups setgroups "libroot.so"
-//go:cgo_import_dynamic libc_setpgid setpgid "libroot.so"
-//go:cgo_import_dynamic libc_setrlimit setrlimit "libroot.so"
-//go:cgo_import_dynamic libc_setsid setsid "libroot.so"
-//go:cgo_import_dynamic libc_setuid setuid "libroot.so"
-
 //go:linkname libc_chdir libc_chdir
 //go:linkname libc_chroot libc_chroot
 //go:linkname libc_dup2 libc_dup2

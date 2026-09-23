@@ -177,18 +177,21 @@ haiku_386)
 	GOOSARCH_in="syscall_haiku_$GOARCH.go"
 	mkerrors=
 	mksyscall="./mksyscall.pl -l32 -haiku"
+	mktypes="GOARCH=$GOARCH go tool cgo -godefs -- -fsigned-char"
 	mkasm="go run mkasm.go"
 	;;
 haiku_amd64)
 	GOOSARCH_in="syscall_haiku_$GOARCH.go"
 	mkerrors=
 	mksyscall="./mksyscall.pl -haiku"
+	mktypes="GOARCH=$GOARCH go tool cgo -godefs -- -fsigned-char"
 	mkasm="go run mkasm.go"
 	;;
 haiku_arm64)
 	GOOSARCH_in="syscall_haiku_$GOARCH.go"
 	mkerrors=
 	mksyscall="./mksyscall.pl -haiku"
+	mktypes="GOARCH=$GOARCH go tool cgo -godefs -- -fsigned-char"
 	mkasm="go run mkasm.go"
 	;;
 linux_386)

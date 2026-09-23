@@ -427,9 +427,6 @@ func Accept4(fd, flags int) (nfd int, sa Sockaddr, err error) {
 	return Accept(fd)
 }
 
-func GetsockoptIPv6MTUInfo(fd, level, opt int) (*IPv6MTUInfo, error) {
-	return nil, ENOSYS
-}
 func GetsockoptUcred(fd, level, opt int) (*Ucred, error) { return nil, ENOSYS }
 
 // Seek rewinds directory descriptors through _kern_rewind_dir; Haiku's lseek rejects them.
@@ -476,11 +473,14 @@ func Gethostname() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	n := 0
-	for n < len(u.Nodename) && u.Nodename[n] != 0 {
-		n++
+	b := make([]byte, 0, len(u.Nodename))
+	for _, c := range u.Nodename {
+		if c == 0 {
+			break
+		}
+		b = append(b, byte(c))
 	}
-	return string(u.Nodename[:n]), nil
+	return string(b), nil
 }
 
 // SetNonblock and CloseOnExec are provided by exec_unix.go.

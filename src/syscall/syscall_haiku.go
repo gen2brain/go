@@ -22,7 +22,10 @@ func RawSyscall6(trap, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errn
 // function at fn, a libc_X_trampoline address. They are used by the wrappers
 // generated into zsyscall_haiku_$GOARCH.go and are implemented in the runtime.
 func syscall(fn, a1, a2, a3 uintptr) (r1, r2 uintptr, err Errno)
+
+//go:linkname syscall6
 func syscall6(fn, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
+
 func syscall9(fn, a1, a2, a3, a4, a5, a6, a7, a8, a9 uintptr) (r1, r2 uintptr, err Errno)
 func rawSyscall(fn, a1, a2, a3 uintptr) (r1, r2 uintptr, err Errno)
 func rawSyscall6(fn, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)

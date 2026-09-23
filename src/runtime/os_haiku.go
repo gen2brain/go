@@ -101,7 +101,7 @@ func getCPUCount() int32 {
 // an M as fnarg.
 //
 //go:nosplit
-func newosproc0(stacksize uintptr, fn uintptr) {
+func newosproc0(stacksize uintptr, fn unsafe.Pointer) {
 	var (
 		attr pthread_attr
 		oset sigset
@@ -129,7 +129,7 @@ func newosproc0(stacksize uintptr, fn uintptr) {
 	var ret int32
 	for tries := 0; tries < 20; tries++ {
 		// pthread_create can fail with EAGAIN; retry a few times.
-		ret = pthread_create(&tid, &attr, fn, nil)
+		ret = pthread_create(&tid, &attr, uintptr(fn), nil)
 		if ret != _EAGAIN {
 			break
 		}

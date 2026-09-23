@@ -36,6 +36,7 @@ package runtime
 //go:cgo_import_dynamic libc_sigaltstack sigaltstack "libroot.so"
 //go:cgo_import_dynamic libc_sigprocmask sigprocmask#LIBROOT_1_ALPHA4 "libroot.so"
 //go:cgo_import_dynamic libc_sysconf sysconf#LIBROOT_1_ALPHA4 "libroot.so"
+//go:cgo_import_dynamic libc_system_time_nsecs system_time_nsecs "libroot.so"
 //go:cgo_import_dynamic libc_usleep usleep "libroot.so"
 //go:cgo_import_dynamic libc_write write "libroot.so"
 //go:cgo_import_dynamic libc_getuid getuid "libroot.so"

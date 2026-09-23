@@ -8,6 +8,7 @@
 package runtime
 
 import (
+	"internal/goarch"
 	"internal/runtime/sys"
 	"unsafe"
 )
@@ -54,6 +55,7 @@ import (
 //go:linkname libc_sigaltstack libc_sigaltstack
 //go:linkname libc_sigprocmask libc_sigprocmask
 //go:linkname libc_sysconf libc_sysconf
+//go:linkname libc_system_time_nsecs libc_system_time_nsecs
 //go:linkname libc_usleep libc_usleep
 //go:linkname libc_write libc_write
 //go:linkname libc_getuid libc_getuid
@@ -99,6 +101,7 @@ var (
 	libc_sigaltstack,
 	libc_sigprocmask,
 	libc_sysconf,
+	libc_system_time_nsecs,
 	libc_usleep,
 	libc_write,
 	libc_getuid,
@@ -465,6 +468,39 @@ func usleep(us uint32) {
 		println("syscall usleep failed: ", hex(err))
 		throw("syscall usleep")
 	}
+}
+
+//go:nowritebarrier
+//go:nosplit
+func system_time_nsecs() int64 {
+	gp := getg()
+	mp := gp.m
+	resetLibcall := true
+	if mp.libcallsp == 0 {
+		mp.libcallg.set(gp)
+		mp.libcallpc = sys.GetCallerPC()
+		mp.libcallsp = sys.GetCallerSP()
+	} else {
+		resetLibcall = false
+	}
+
+	fn := &libc_system_time_nsecs
+	c := libcall{
+		fn:   uintptr(unsafe.Pointer(fn)),
+		n:    0,
+		args: uintptr(unsafe.Pointer(&fn)), // unused but must be non-nil
+	}
+
+	asmcgocall(unsafe.Pointer(&asmsyscall6), unsafe.Pointer(&c))
+
+	if resetLibcall {
+		mp.libcallsp = 0
+	}
+
+	if goarch.PtrSize == 4 {
+		return int64(uint64(c.r1) | uint64(c.r2)<<32)
+	}
+	return int64(c.r1)
 }
 
 //go:nosplit

@@ -94,6 +94,9 @@ TEXT libc_sigprocmask(SB),NOSPLIT,$0
 TEXT libc_sysconf(SB),NOSPLIT,$0
 	JMP	libc_sysconf_dyn(SB)
 
+TEXT libc_system_time_nsecs(SB),NOSPLIT,$0
+	JMP	libc_system_time_nsecs_dyn(SB)
+
 TEXT libc_usleep(SB),NOSPLIT,$0
 	JMP	libc_usleep_dyn(SB)
 

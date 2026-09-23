@@ -432,11 +432,7 @@ func validSIGPROF(mp *m, c *sigctxt) bool {
 
 //go:nosplit
 func nanotime1() int64 {
-	tp := &timespec{}
-	if clock_gettime(_CLOCK_MONOTONIC, tp) != 0 {
-		throw("syscall clock_gettime failed")
-	}
-	return int64(tp.tv_sec)*1e9 + int64(tp.tv_nsec)
+	return system_time_nsecs()
 }
 
 func walltime() (sec int64, nsec int32) {

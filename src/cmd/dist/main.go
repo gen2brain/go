@@ -103,6 +103,9 @@ func main() {
 				// We don't support any of the OS X versions that run on 32-bit-only hardware anymore.
 				gohostarch = "amd64"
 			}
+		case strings.Contains(out, "BePC"):
+			// Haiku on 32-bit x86.
+			gohostarch = "386"
 		case strings.Contains(out, "aarch64"), strings.Contains(out, "arm64"):
 			gohostarch = "arm64"
 		case strings.Contains(out, "arm"):

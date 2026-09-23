@@ -100,6 +100,20 @@ includes_FreeBSD='
 #endif
 '
 
+includes_Haiku='
+#include <sys/types.h>
+#include <sys/file.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <sys/sockio.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <net/if.h>
+#include <net/if_types.h>
+#include <net/route.h>
+#include <termios.h>
+'
+
 includes_Linux='
 #define _LARGEFILE_SOURCE
 #define _LARGEFILE64_SOURCE
@@ -246,6 +260,11 @@ includes='
 #include <sys/resource.h>
 '
 
+if [ "$uname" = "Haiku" ]; then
+	# Haiku has no <sys/signal.h>; <signal.h> is enough.
+	includes=${includes//'#include <sys/signal.h>'/}
+fi
+
 ccflags="$@"
 
 # Write go tool cgo -godefs input.
@@ -363,7 +382,12 @@ cat _error.out | grep -vf _error.grep | grep -vf _signal.grep
 echo
 echo '// Errors'
 echo 'const ('
-cat _error.out | grep -f _error.grep | sed 's/=\(.*\)/= Errno(\1)/'
+if [ "$uname" = "Haiku" ]; then
+	# Haiku error codes are negative ints; -N is ^uintptr(N-1) on every word size.
+	cat _error.out | grep -f _error.grep | sed 's/=[[:space:]]*-\(0x[0-9a-f]*\)/= Errno(^uintptr(\1 - 1))/; s/=[[:space:]]*\(0x[0-9a-f]*\)$/= Errno(\1)/'
+else
+	cat _error.out | grep -f _error.grep | sed 's/=\(.*\)/= Errno(\1)/'
+fi
 echo ')'
 
 echo
@@ -383,6 +407,15 @@ echo ')'
 #include <signal.h>
 
 #define nelem(x) (sizeof(x)/sizeof((x)[0]))
+"
+	if [ "$uname" = "Haiku" ]; then
+		echo -E '#define ERRORS_TABLE "var errors = map[Errno]string{\n"'
+		echo -E '#define ERRORS_ENTRY(e, s) ((e) < 0 ? printf("\tErrno(^uintptr(%#llx - 1)): \"%s\",\n", -(long long)(e), s) : printf("\t%d: \"%s\",\n", e, s))'
+	else
+		echo -E '#define ERRORS_TABLE "var errors = [...]string {\n"'
+		echo -E '#define ERRORS_ENTRY(e, s) printf("\t%d: \"%s\",\n", e, s)'
+	fi
+	echo -E "
 
 enum { A = 'A', Z = 'Z', a = 'a', z = 'z' }; // avoid need for single quotes below
 
@@ -410,7 +443,8 @@ int signals[] = {
 static int
 intcmp(const void *a, const void *b)
 {
-	return *(int*)a - *(int*)b;
+	int x = *(int*)a, y = *(int*)b;
+	return (x > y) - (x < y);
 }
 
 int
@@ -420,7 +454,7 @@ main(void)
 	char buf[1024], *p;
 
 	printf("\n\n// Error table\n");
-	printf("var errors = [...]string {\n");
+	printf(ERRORS_TABLE);
 	qsort(errors, nelem(errors), sizeof errors[0], intcmp);
 	for(i=0; i<nelem(errors); i++) {
 		e = errors[i];
@@ -430,7 +464,7 @@ main(void)
 		// lowercase first letter: Bad -> bad, but STREAM -> STREAM.
 		if(A <= buf[0] && buf[0] <= Z && a <= buf[1] && buf[1] <= z)
 			buf[0] += a - A;
-		printf("\t%d: \"%s\",\n", e, buf);
+		ERRORS_ENTRY(e, buf);
 	}
 	printf("}\n\n");
 	

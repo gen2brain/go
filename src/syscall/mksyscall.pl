@@ -29,6 +29,7 @@ my $darwin = 0;
 my $openbsd = 0;
 my $netbsd = 0;
 my $dragonfly = 0;
+my $haiku = 0;
 my $arm = 0; # 64-bit value should use (even, odd)-pair
 my $libc = 0;
 my $tags = "";  # build tags
@@ -62,6 +63,11 @@ if($ARGV[0] eq "-netbsd") {
 }
 if($ARGV[0] eq "-dragonfly") {
 	$dragonfly = 1;
+	shift;
+}
+if($ARGV[0] eq "-haiku") {
+	$haiku = 1;
+	$libc = 1;
 	shift;
 }
 if($ARGV[0] eq "-arm") {
@@ -125,12 +131,26 @@ while(<>) {
 	# Line must be of the form
 	#	func Open(path string, mode int, perm int) (fd int, errno error)
 	# Split into name, in params, out params.
-	if(!/^\/\/sys(nb)? (\w+)\(([^()]*)\)\s*(?:\(([^()]+)\))?\s*(?:=\s*((?i)_?SYS_[A-Z0-9_]+))?$/) {
+	# On Haiku the optional suffix names the libroot symbol directly, with an
+	# optional library and symbol version: = [lib.]symbol[#VERSION].
+	my ($func, $in, $out, $sysname, $haikulib, $haikusym, $haikuver);
+	if($haiku) {
+		if(!/^\/\/sys(nb)? (\w+)\(([^()]*)\)\s*(?:\(([^()]+)\))?\s*(?:=\s*(?:(\w+)\.)?(\w+)(?:#(\w+))?)?$/) {
+			print STDERR "$ARGV:$.: malformed //sys declaration\n";
+			$errors = 1;
+			next;
+		}
+		($func, $in, $out, $haikulib, $haikusym, $haikuver) = ($2, $3, $4, $5, $6, $7);
+		$haikusym = lc($func) if !defined($haikusym);
+		$haikulib = "libroot" if !defined($haikulib);
+		$sysname = "SYS_$haikusym";
+	} elsif(!/^\/\/sys(nb)? (\w+)\(([^()]*)\)\s*(?:\(([^()]+)\))?\s*(?:=\s*((?i)_?SYS_[A-Z0-9_]+))?$/) {
 		print STDERR "$ARGV:$.: malformed //sys declaration\n";
 		$errors = 1;
 		next;
+	} else {
+		($func, $in, $out, $sysname) = ($2, $3, $4, $5);
 	}
-	my ($func, $in, $out, $sysname) = ($2, $3, $4, $5);
 
 	# Split argument lists on comma.
 	my @in = parseparamlist($in);
@@ -289,7 +309,7 @@ while(<>) {
 	if($libc) {
 		if($funcname eq "") {
 			$sysname = substr $sysname, 4;
-			$sysname =~ y/A-Z/a-z/;
+			$sysname =~ y/A-Z/a-z/ if !$haiku;
 			$funcname = "libc_$sysname";
 		}
 		$sysname = "abi.FuncPCABI0(${funcname}_trampoline)";
@@ -372,6 +392,10 @@ while(<>) {
 			my $libc = "libc.so";
 			if ($darwin) {
 				$libc = "/usr/lib/libSystem.B.dylib";
+			}
+			if ($haiku) {
+				$libc = "$haikulib.so";
+				$basename .= "#$haikuver" if defined($haikuver);
 			}
 			$text .= "//go:cgo_import_dynamic $funcname $basename \"$libc\"\n\n";
 		}

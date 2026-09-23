@@ -57,6 +57,10 @@ func main() {
 			if goos == "openbsd" && arch == "ppc64" {
 				fmt.Fprintf(&out, "\tCALL\t%s(SB)\n", fn)
 				fmt.Fprintf(&out, "\tRET\n")
+			} else if goos == "haiku" && arch == "386" {
+				// Haiku's i386 PLT needs EBX set to the GOT; jump to the address instead.
+				fmt.Fprintf(&out, "\tLEAL\t%s(SB), AX\n", fn)
+				fmt.Fprintf(&out, "\tJMP\tAX\n")
 			} else {
 				fmt.Fprintf(&out, "\tJMP\t%s(SB)\n", fn)
 			}

@@ -7,25 +7,29 @@
 package syscall
 
 import (
+	"internal/abi"
 	"unsafe"
 )
 
-// Syscall, Syscall6, RawSyscall, RawSyscall6 are implemented in
-// asm_haiku_amd64.s; they jump to runtime helpers. Haiku exposes no
-// numbered syscall API, so Syscall always returns EINVAL.
+// Syscall, Syscall6, RawSyscall and RawSyscall6 jump to runtime helpers
+// (asm_haiku.s). Haiku exposes no numbered syscall API, so they return EINVAL.
 func Syscall(trap, a1, a2, a3 uintptr) (r1, r2 uintptr, err Errno)
 func Syscall6(trap, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
 func RawSyscall(trap, a1, a2, a3 uintptr) (r1, r2 uintptr, err Errno)
 func RawSyscall6(trap, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
 
-// syscall6 / rawSyscall6 are bridged to the runtime's libcall machinery.
-// They are used by the auto-generated wrappers in zsyscall_haiku_amd64.go.
-func syscall6(trap, nargs, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
-func rawSyscall6(trap, nargs, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
-
 // haikuErrnoToPosix maps a raw libroot errno to the POSIX-positive value
 // the syscall package exposes. Implemented in runtime/syscall_haiku.go.
 func haikuErrnoToPosix(raw uintptr) uintptr
+
+// syscall, syscall6, syscall9, rawSyscall and rawSyscall6 call the libroot
+// function at fn, a libc_X_trampoline address. They are used by the wrappers
+// generated into zsyscall_haiku_$GOARCH.go and are implemented in the runtime.
+func syscall(fn, a1, a2, a3 uintptr) (r1, r2 uintptr, err Errno)
+func syscall6(fn, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
+func syscall9(fn, a1, a2, a3, a4, a5, a6, a7, a8, a9 uintptr) (r1, r2 uintptr, err Errno)
+func rawSyscall(fn, a1, a2, a3 uintptr) (r1, r2 uintptr, err Errno)
+func rawSyscall6(fn, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
 
 const ImplementsGetwd = true
 
@@ -151,7 +155,7 @@ func Pipe(p []int) error {
 	if len(p) != 2 {
 		return EINVAL
 	}
-	var pp [2]int32
+	var pp [2]_C_int
 	err := pipe(&pp)
 	if err == nil {
 		p[0] = int(pp[0])
@@ -211,7 +215,7 @@ func Futimes(fd int, tv []Timeval) error {
 func Getwd() (string, error) {
 	for sz := 4096; ; sz *= 2 {
 		b := make([]byte, sz)
-		err := getcwd(&b[0], uint64(sz))
+		err := getcwd(b)
 		if err == nil {
 			n := clen(b)
 			return string(b[:n]), nil
@@ -223,7 +227,7 @@ func Getwd() (string, error) {
 }
 
 func Getcwd(buf []byte) (n int, err error) {
-	err = getcwd(&buf[0], uint64(len(buf)))
+	err = getcwd(buf)
 	if err == nil {
 		i := 0
 		for buf[i] != 0 {
@@ -274,12 +278,9 @@ func Setgroups(gids []int) error {
 func FindImagePath() (string, error) {
 	const B_FIND_PATH_IMAGE_PATH = 1000
 	var buf [4096]byte
-	codePtr := uintptr(unsafe.Pointer(&libc_find_path))
-	r0, _, _ := syscall6(uintptr(unsafe.Pointer(&libc_find_path)), 5,
-		codePtr, B_FIND_PATH_IMAGE_PATH, 0,
-		uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)), 0)
-	if int32(r0) < 0 {
-		return "", Errno(haikuErrnoToPosix(uintptr(uint32(int32(r0)))))
+	status := findPath(abi.FuncPCABI0(libc_find_path_trampoline), B_FIND_PATH_IMAGE_PATH, nil, &buf[0], uintptr(len(buf)))
+	if status < 0 {
+		return "", Errno(haikuErrnoToPosix(uintptr(uint32(status))))
 	}
 	n := 0
 	for n < len(buf) && buf[n] != 0 {
@@ -327,10 +328,7 @@ func ReadDirent(fd int, buf []byte) (n int, err error) {
 }
 
 func readDirRaw(fd int, buf []byte) (count int32, status int32) {
-	r0, _, _ := syscall6(uintptr(unsafe.Pointer(&libc_kern_read_dir)), 4,
-		uintptr(fd), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)),
-		0xFFFF, 0, 0)
-	c := int32(r0)
+	c := kernReadDir(fd, buf, 0xFFFF)
 	if c < 0 {
 		return 0, c
 	}
@@ -338,9 +336,7 @@ func readDirRaw(fd int, buf []byte) (count int32, status int32) {
 }
 
 func promoteToDirFD(fd int) error {
-	r0, _, _ := syscall6(uintptr(unsafe.Pointer(&libc_kern_open_dir)), 2,
-		uintptr(fd), 0, 0, 0, 0, 0)
-	dirFD := int32(r0)
+	dirFD := kernOpenDir(fd, nil)
 	if dirFD < 0 {
 		return Errno(haikuErrnoToPosix(uintptr(uint32(dirFD))))
 	}
@@ -354,11 +350,17 @@ func promoteToDirFD(fd int) error {
 
 func Wait4(pid int, wstatus *WaitStatus, options int, rusage *Rusage) (int, error) {
 	var status _C_int
-	wpid, err := wait4(pid, &status, options, rusage)
+	wpid, err := waitpid(pid, &status, options)
+	if err != nil {
+		return -1, err
+	}
 	if wstatus != nil {
 		*wstatus = WaitStatus(status)
 	}
-	return wpid, err
+	if rusage != nil {
+		*rusage = Rusage{}
+	}
+	return wpid, nil
 }
 
 func Mmap(fd int, offset int64, length int, prot int, flags int) (data []byte, err error) {
@@ -379,34 +381,11 @@ var mapper = &mmapper{
 // third-party packages. The signature must not change. See
 // go.dev/issue/67401.
 
-func munmap(addr uintptr, length uintptr) error {
-	_, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_munmap)), 2, addr, length, 0, 0, 0, 0)
-	if e1 != 0 {
-		return errnoErr(e1)
-	}
-	return nil
-}
-
 func Madvise(b []byte, behav int) error {
 	if len(b) == 0 {
 		return nil
 	}
-	_, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_madvise)), 3,
-		uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)), uintptr(behav), 0, 0, 0)
-	if e1 != 0 {
-		return errnoErr(e1)
-	}
-	return nil
-}
-
-// Mprotect helper for memory mapping.
-func Mprotect(b []byte, prot int) (err error) {
-	_, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_mprotect)), 3,
-		uintptr(unsafe.Pointer(&b[0])), uintptr(len(b)), uintptr(prot), 0, 0, 0)
-	if e1 != 0 {
-		err = errnoErr(e1)
-	}
-	return
+	return madvise(b, behav)
 }
 
 func Mlock(b []byte) error     { return ENOSYS }
@@ -430,23 +409,13 @@ func Getsockname(fd int) (Sockaddr, error) {
 	return anyToSockaddr(&rsa)
 }
 
-func Listen(fd, n int) error {
-	_, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_listen)), 2, uintptr(fd), uintptr(n), 0, 0, 0, 0)
-	if e1 != 0 {
-		return errnoErr(e1)
-	}
-	return nil
-}
-
 func Accept(fd int) (nfd int, sa Sockaddr, err error) {
 	var rsa RawSockaddrAny
 	var len _Socklen = SizeofSockaddrAny
-	r0, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_accept)), 3,
-		uintptr(fd), uintptr(unsafe.Pointer(&rsa)), uintptr(unsafe.Pointer(&len)), 0, 0, 0)
-	if e1 != 0 {
-		return 0, nil, errnoErr(e1)
+	nfd, err = accept(fd, &rsa, &len)
+	if err != nil {
+		return 0, nil, err
 	}
-	nfd = int(r0)
 	sa, err = anyToSockaddr(&rsa)
 	if err != nil {
 		Close(nfd)
@@ -463,97 +432,47 @@ func GetsockoptIPv6MTUInfo(fd, level, opt int) (*IPv6MTUInfo, error) {
 }
 func GetsockoptUcred(fd, level, opt int) (*Ucred, error) { return nil, ENOSYS }
 
-func Open(path string, mode int, perm uint32) (fd int, err error) {
-	return open(path, mode, perm)
-}
-
-func Close(fd int) error { return closefd(fd) }
-
-// Read/Write/Pread/Pwrite are provided by syscall_unix.go and route to
-// the lowercase read/write/pread/pwrite defined in zsyscall_haiku_amd64.go.
-
+// Seek rewinds directory descriptors through _kern_rewind_dir; Haiku's lseek rejects them.
 func Seek(fd int, offset int64, whence int) (int64, error) {
-	return lseek(fd, offset, whence)
+	off, err := lseek(fd, offset, whence)
+	if err == ESPIPE && offset == 0 && whence == 0 && kernRewindDir(fd) >= 0 {
+		return 0, nil
+	}
+	return off, err
 }
 
-func Stat(path string, stat *Stat_t) error  { return stat_(path, stat) }
-func Lstat(path string, stat *Stat_t) error { return lstat(path, stat) }
-func Fstat(fd int, stat *Stat_t) error      { return fstat(fd, stat) }
 func Fstatat(dirfd int, path string, stat *Stat_t, flags int) error {
 	return fstatat(dirfd, path, stat, flags)
 }
 func Statfs(path string, buf *Statfs_t) error { return ENOSYS }
 func Fstatfs(fd int, buf *Statfs_t) error     { return ENOSYS }
 
-func Chmod(path string, mode uint32) error           { return chmod(path, mode) }
-func Fchmod(fd int, mode uint32) error               { return fchmod(fd, mode) }
-func Chown(path string, uid, gid int) error          { return chown(path, uid, gid) }
-func Lchown(path string, uid, gid int) error         { return lchown(path, uid, gid) }
-func Fchown(fd int, uid, gid int) error              { return fchown(fd, uid, gid) }
-func Truncate(path string, length int64) error       { return truncate(path, length) }
-func Ftruncate(fd int, length int64) error           { return ftruncate(fd, length) }
-func Mkdir(path string, mode uint32) error           { return mkdir(path, mode) }
-func Rmdir(path string) error                        { return rmdir(path) }
-func Unlink(path string) error                       { return unlink(path) }
-func Rename(from, to string) error                   { return rename(from, to) }
-func Link(from, to string) error                     { return link(from, to) }
-func Symlink(from, to string) error                  { return symlink(from, to) }
-func Fchdir(fd int) error                            { return fchdir(fd) }
-func Mknod(path string, mode uint32, dev int) error  { return mknod(path, mode, dev) }
-func Chroot(path string) error                       { return chroot(path) }
-func Sync()                                          { libcSync() }
-func Fsync(fd int) error                             { return fsync(fd) }
-func Dup(oldfd int) (int, error)                     { return dup(oldfd) }
-func Dup2(oldfd, newfd int) error                    { return dup2(oldfd, newfd) }
-func Dup3(oldfd, newfd, flags int) error             { return dup2(oldfd, newfd) }
+func Dup3(oldfd, newfd, flags int) error             { return Dup2(oldfd, newfd) }
 func Getdents(fd int, buf []byte) (n int, err error) { return read(fd, buf) }
-func Mkfifo(path string, mode uint32) error          { return mkfifo(path, mode) }
-func Umask(mask int) (oldmask int)                   { return umask(mask) }
-func Tcgetpgrp(fd int) (pgid int32, err error)       { return tcgetpgrp(fd) }
-func Tcsetpgrp(fd int, pgid int32) error             { return tcsetpgrp(fd, pgid) }
-func Getpriority(which, who int) (int, error)        { return getpriority(which, who) }
-func Setpriority(which, who, prio int) error         { return setpriority(which, who, prio) }
+
+func Getpriority(which, who int) (int, error) {
+	prio, err := getpriority(which, who)
+	return int(prio), err
+}
 
 // FcntlFlock performs a fcntl syscall for the [F_GETLK], [F_SETLK] or [F_SETLKW] command.
 func FcntlFlock(fd uintptr, cmd int, lk *Flock_t) error {
-	_, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_fcntl)), 3,
-		fd, uintptr(cmd), uintptr(unsafe.Pointer(lk)), 0, 0, 0)
-	if e1 != 0 {
-		return errnoErr(e1)
-	}
-	return nil
+	return fcntlFlock(fd, cmd, lk)
 }
 
-// IDs / process info.
+func Getpgrp() int {
+	pgid, _ := getpgrp()
+	return pgid
+}
 
-func Getuid() int  { return int(getuidRaw()) }
-func Geteuid() int { return int(geteuid()) }
-func Getgid() int  { return int(getgid()) }
-func Getegid() int { return int(getegid()) }
-func Getpid() int  { return int(getpidRaw()) }
-func Getppid() int { return int(getppid()) }
-func Getpgrp() int { pid, _ := getpgrp(); return pid }
-func Getpgid(pid int) (int, error) {
-	r, err := getpgid(pid)
-	return r, err
-}
-func Setreuid(ruid, euid int) error { return setreuid(ruid, euid) }
-func Setregid(rgid, egid int) error { return setregid(rgid, egid) }
-func Getrlimit(which int, lim *Rlimit) error {
-	return getrlimitRaw(which, lim)
-}
 func Kill(pid int, sig Signal) error {
 	return kill(pid, int(sig))
-}
-func Gettimeofday(tv *Timeval) error { return gettimeofday(tv) }
-func Getrusage(who int, rusage *Rusage) error {
-	return getrusage(who, rusage)
 }
 
 // Hostname.
 func Gethostname() (string, error) {
 	var u Utsname
-	err := uname(&u)
+	err := Uname(&u)
 	if err != nil {
 		return "", err
 	}
@@ -564,18 +483,7 @@ func Gethostname() (string, error) {
 	return string(u.Nodename[:n]), nil
 }
 
-func Uname(u *Utsname) error { return uname(u) }
-
 // SetNonblock and CloseOnExec are provided by exec_unix.go.
-
-func Flock(fd int, how int) error {
-	_, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_flock)), 2,
-		uintptr(fd), uintptr(how), 0, 0, 0, 0)
-	if e1 != 0 {
-		return errnoErr(e1)
-	}
-	return nil
-}
 
 // Statfs_t and Ucred placeholders for tools that import them.
 type Statfs_t struct {
@@ -684,13 +592,9 @@ func recvmsgRaw(fd int, p, oob []byte, flags int, rsa *RawSockaddrAny) (n, oobn 
 	}
 	msg.Iov = &iov
 	msg.Iovlen = 1
-	r0, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_recvmsg)), 3,
-		uintptr(fd), uintptr(unsafe.Pointer(&msg)), uintptr(flags), 0, 0, 0)
-	if e1 != 0 {
-		err = errnoErr(e1)
+	if n, err = recvmsg(fd, &msg, flags); err != nil {
 		return
 	}
-	n = int(r0)
 	oobn = int(msg.Controllen)
 	recvflags = int(msg.Flags)
 	return
@@ -716,12 +620,7 @@ func sendmsgN(fd int, p, oob []byte, ptr unsafe.Pointer, salen _Socklen, flags i
 	}
 	msg.Iov = &iov
 	msg.Iovlen = 1
-	r0, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_sendmsg)), 3,
-		uintptr(fd), uintptr(unsafe.Pointer(&msg)), uintptr(flags), 0, 0, 0)
-	if e1 != 0 {
-		return 0, errnoErr(e1)
-	}
-	return int(r0), nil
+	return sendmsg(fd, &msg, flags)
 }
 
 // Misc constants exec_unix.go needs.
@@ -758,18 +657,6 @@ const (
 
 const SYS_EXECVE = 0
 
-
-// readlen wraps read for exec_unix.go.
-func readlen(fd int, buf *byte, nbuf int) (int, error) {
-	var p []byte = unsafe.Slice(buf, nbuf)
-	r0, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_read)), 3,
-		uintptr(fd), uintptr(unsafe.Pointer(&p[0])), uintptr(nbuf), 0, 0, 0)
-	if e1 != 0 {
-		return int(r0), e1
-	}
-	return int(r0), nil
-}
-
 // Errno aliases for symbols other Unix flavors export but Haiku does not
 // have at the libc layer. Mapped to the closest Haiku error so that
 // errors.Is checks in net behave reasonably.
@@ -781,3 +668,112 @@ const (
 	ETOOMANYREFS    = ENOBUFS
 	EUSERS          = ENOMEM
 )
+
+/*
+ * Wrapped
+ */
+
+//sys	open(path string, mode int, perm uint32) (fd int, err error)
+//sys	read(fd int, p []byte) (n int, err error)
+//sys	readlen(fd int, buf *byte, nbuf int) (n int, err error) = read
+//sys	write(fd int, p []byte) (n int, err error)
+//sys	writev(fd int, iovecs []Iovec) (n uintptr, err error)
+//sys	pread(fd int, p []byte, offset int64) (n int, err error)
+//sys	pwrite(fd int, p []byte, offset int64) (n int, err error)
+//sys	lseek(fd int, offset int64, whence int) (newoffset int64, err error)
+//sysnb	pipe(p *[2]_C_int) (err error)
+//sys	fcntl(fd int, cmd int, arg int) (val int, err error)
+//sys	fcntlFlock(fd uintptr, cmd int, lk *Flock_t) (err error) = fcntl
+//sys	readlink(path string, buf []byte) (n int, err error)
+//sys	unlinkat(dirfd int, path string, flags int) (err error)
+//sys	fstatat(dirfd int, path string, stat *Stat_t, flags int) (err error) = fstatat#LIBROOT_1_ALPHA1
+//sys	faccessat(dirfd int, path string, mode uint32, flags int) (err error)
+//sys	utimes(path string, timeval *[2]Timeval) (err error)
+//sys	futimes(fd int, timeval *[2]Timeval) (err error)
+//sys	utimensat(dirfd int, path string, times *[2]Timespec, flags int) (err error)
+//sys	getcwd(buf []byte) (err error)
+//sysnb	getpgrp() (pgid int, err error)
+//sysnb	getgroups(ngid int, gid *_Gid_t) (n int, err error)
+//sysnb	setgroups(ngid int, gid *_Gid_t) (err error)
+//sys	kill(pid int, signum int) (err error)
+//sys	waitpid(pid int, status *_C_int, options int) (wpid int, err error)
+//sysnb	setrlimit(which int, lim *Rlimit) (err error)
+//sys	getpriority(which int, who int) (prio int32, err error)
+//sys	mmap(addr uintptr, length uintptr, prot int, flag int, fd int, pos int64) (ret uintptr, err error)
+//sys	munmap(addr uintptr, length uintptr) (err error)
+//sys	madvise(b []byte, behav int) (err error)
+//sysnb	socket(domain int, typ int, proto int) (fd int, err error) = libnetwork.socket
+//sysnb	socketpair(domain int, typ int, proto int, fd *[2]int32) (err error) = libnetwork.socketpair
+//sys	bind(s int, addr unsafe.Pointer, addrlen _Socklen) (err error) = libnetwork.bind
+//sys	connect(s int, addr unsafe.Pointer, addrlen _Socklen) (err error) = libnetwork.connect
+//sys	accept(s int, rsa *RawSockaddrAny, addrlen *_Socklen) (fd int, err error) = libnetwork.accept
+//sysnb	getsockname(fd int, rsa *RawSockaddrAny, addrlen *_Socklen) (err error) = libnetwork.getsockname
+//sysnb	getpeername(fd int, rsa *RawSockaddrAny, addrlen *_Socklen) (err error) = libnetwork.getpeername
+//sys	recvfrom(fd int, p []byte, flags int, from *RawSockaddrAny, fromlen *_Socklen) (n int, err error) = libnetwork.recvfrom
+//sys	sendto(s int, buf []byte, flags int, to unsafe.Pointer, addrlen _Socklen) (err error) = libnetwork.sendto
+//sys	recvmsg(s int, msg *Msghdr, flags int) (n int, err error) = libnetwork.recvmsg
+//sys	sendmsg(s int, msg *Msghdr, flags int) (n int, err error) = libnetwork.sendmsg
+//sys	getsockopt(s int, level int, name int, val unsafe.Pointer, vallen *_Socklen) (err error) = libnetwork.getsockopt
+//sys	setsockopt(s int, level int, name int, val unsafe.Pointer, vallen uintptr) (err error) = libnetwork.setsockopt
+//sys	findPath(codePointer uintptr, baseDirectory int, subPath *byte, pathBuffer *byte, bufferSize uintptr) (status int32) = find_path
+//sys	kernReadDir(fd int, buf []byte, maxCount uint32) (count int32) = _kern_read_dir
+//sys	kernOpenDir(fd int, path *byte) (dirfd int32) = _kern_open_dir
+//sys	kernRewindDir(fd int) (status int32) = _kern_rewind_dir
+
+/*
+ * Exposed directly
+ */
+
+//sys	Open(path string, mode int, perm uint32) (fd int, err error)
+//sys	Close(fd int) (err error)
+//sys	Dup(fd int) (nfd int, err error)
+//sys	Dup2(from int, to int) (err error)
+//sys	Fsync(fd int) (err error)
+//sys	Sync()
+//sys	Chdir(path string) (err error)
+//sys	Fchdir(fd int) (err error)
+//sys	Chmod(path string, mode uint32) (err error)
+//sys	Fchmod(fd int, mode uint32) (err error)
+//sys	Chown(path string, uid int, gid int) (err error)
+//sys	Lchown(path string, uid int, gid int) (err error)
+//sys	Fchown(fd int, uid int, gid int) (err error)
+//sys	Chroot(path string) (err error)
+//sys	Link(path string, link string) (err error)
+//sys	Symlink(path string, link string) (err error)
+//sys	Unlink(path string) (err error)
+//sys	Rename(from string, to string) (err error)
+//sys	Mkdir(path string, mode uint32) (err error)
+//sys	Rmdir(path string) (err error)
+//sys	Mknod(path string, mode uint32, dev int) (err error)
+//sys	Mkfifo(path string, mode uint32) (err error)
+//sys	Truncate(path string, length int64) (err error)
+//sys	Ftruncate(fd int, length int64) (err error)
+//sys	Stat(path string, stat *Stat_t) (err error) = stat#LIBROOT_1_ALPHA1
+//sys	Lstat(path string, stat *Stat_t) (err error) = lstat#LIBROOT_1_ALPHA1
+//sys	Fstat(fd int, stat *Stat_t) (err error) = fstat#LIBROOT_1_ALPHA1
+//sysnb	Umask(newmask int) (oldmask int)
+//sysnb	Getuid() (uid int)
+//sysnb	Geteuid() (uid int)
+//sysnb	Getgid() (gid int)
+//sysnb	Getegid() (gid int)
+//sysnb	Getpid() (pid int)
+//sysnb	Getppid() (ppid int)
+//sysnb	Getpgid(pid int) (pgid int, err error)
+//sysnb	Setpgid(pid int, pgid int) (err error)
+//sysnb	Setsid() (pid int, err error)
+//sysnb	Setuid(uid int) (err error)
+//sysnb	Setgid(gid int) (err error)
+//sysnb	Setreuid(ruid int, euid int) (err error)
+//sysnb	Setregid(rgid int, egid int) (err error)
+//sysnb	Getrlimit(which int, lim *Rlimit) (err error)
+//sysnb	Getrusage(who int, rusage *Rusage) (err error) = getrusage#LIBROOT_1_BETA3
+//sysnb	Gettimeofday(tv *Timeval) (err error)
+//sysnb	Uname(buf *Utsname) (err error)
+//sys	Tcgetpgrp(fd int) (pgid int32, err error)
+//sys	Tcsetpgrp(fd int, pgid int32) (err error)
+//sys	Setpriority(which int, who int, prio int) (err error)
+//sys	Mprotect(b []byte, prot int) (err error)
+//sys	Flock(fd int, how int) (err error)
+//sys	Listen(s int, backlog int) (err error) = libnetwork.listen
+//sys	Shutdown(s int, how int) (err error) = libnetwork.shutdown
+//sys	Select(nfd int, r *FdSet, w *FdSet, e *FdSet, timeout *Timeval) (n int, err error)

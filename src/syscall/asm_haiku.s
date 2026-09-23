@@ -4,26 +4,36 @@
 
 #include "textflag.h"
 
-//
-// System calls for 386 on Haiku are implemented in
-// ../runtime/syscall_haiku.go. The trampolines below dispatch the
-// exported syscall entry points to the matching runtime helpers.
-//
+// System calls on Haiku are implemented in ../runtime/syscall_haiku.go.
+// These stubs dispatch the syscall package entry points to the matching
+// runtime helpers.
 
-TEXT ·syscall6(SB),NOSPLIT,$0
-	JMP	runtime·syscall_syscall6(SB)
+TEXT ·Syscall(SB),NOSPLIT,$0
+	JMP	runtime·syscall_Syscall(SB)
 
-TEXT ·syscall7(SB),NOSPLIT,$0
-	JMP	runtime·syscall_syscall7(SB)
-
-TEXT ·rawSyscall6(SB),NOSPLIT,$0
-	JMP	runtime·syscall_rawSyscall6(SB)
+TEXT ·Syscall6(SB),NOSPLIT,$0
+	JMP	runtime·syscall_Syscall6(SB)
 
 TEXT ·RawSyscall(SB),NOSPLIT,$0
 	JMP	runtime·syscall_RawSyscall(SB)
 
-TEXT ·Syscall(SB),NOSPLIT,$0
-	JMP	runtime·syscall_Syscall(SB)
+TEXT ·RawSyscall6(SB),NOSPLIT,$0
+	JMP	runtime·syscall_RawSyscall6(SB)
+
+TEXT ·syscall(SB),NOSPLIT,$0
+	JMP	runtime·syscall_syscall(SB)
+
+TEXT ·syscall6(SB),NOSPLIT,$0
+	JMP	runtime·syscall_syscall6(SB)
+
+TEXT ·syscall9(SB),NOSPLIT,$0
+	JMP	runtime·syscall_syscall9(SB)
+
+TEXT ·rawSyscall(SB),NOSPLIT,$0
+	JMP	runtime·syscall_rawSyscall(SB)
+
+TEXT ·rawSyscall6(SB),NOSPLIT,$0
+	JMP	runtime·syscall_rawSyscall6(SB)
 
 // Trampolines for the libc-syscall path used by ../syscall/exec_libc.go's
 // forkAndExecInChild. Each forwards to a //go:nosplit runtime helper that

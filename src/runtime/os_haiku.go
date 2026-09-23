@@ -159,9 +159,11 @@ func mpreinit(mp *m) {
 
 // errno is per-thread on Haiku and accessible via _errnop, which returns
 // a pointer to the calling thread's errno location.
+//
+//go:nosplit
 func miniterrno() {
 	mp := getg().m
-	r, _ := syscall0(&libc__errnop)
+	r, _ := syscall0(abi.FuncPCABI0(libc__errnop_trampoline))
 	mp.perrno = r
 }
 
@@ -467,7 +469,7 @@ func runPerThreadSyscall() {
 
 //go:nosplit
 func getuid() int32 {
-	r, errno := syscall0(&libc_getuid)
+	r, errno := syscall0(abi.FuncPCABI0(libc_getuid_trampoline))
 	if errno != 0 {
 		print("getuid failed ", errno)
 		throw("getuid")
@@ -477,7 +479,7 @@ func getuid() int32 {
 
 //go:nosplit
 func geteuid() int32 {
-	r, errno := syscall0(&libc_geteuid)
+	r, errno := syscall0(abi.FuncPCABI0(libc_geteuid_trampoline))
 	if errno != 0 {
 		print("geteuid failed ", errno)
 		throw("geteuid")
@@ -487,7 +489,7 @@ func geteuid() int32 {
 
 //go:nosplit
 func getgid() int32 {
-	r, errno := syscall0(&libc_getgid)
+	r, errno := syscall0(abi.FuncPCABI0(libc_getgid_trampoline))
 	if errno != 0 {
 		print("getgid failed ", errno)
 		throw("getgid")
@@ -497,7 +499,7 @@ func getgid() int32 {
 
 //go:nosplit
 func getegid() int32 {
-	r, errno := syscall0(&libc_getegid)
+	r, errno := syscall0(abi.FuncPCABI0(libc_getegid_trampoline))
 	if errno != 0 {
 		print("getegid failed ", errno)
 		throw("getegid")

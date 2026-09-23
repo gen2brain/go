@@ -7,6 +7,7 @@
 package runtime
 
 import (
+	"internal/abi"
 	"internal/runtime/atomic"
 	"unsafe"
 )
@@ -17,7 +18,7 @@ import (
 
 //go:nosplit
 func poll_(pfds *pollfd, npfds uintptr, timeout int32) (int32, int32) {
-	r, err := syscall3(&libc_poll, uintptr(unsafe.Pointer(pfds)), npfds, uintptr(int64(timeout)))
+	r, err := syscall3(abi.FuncPCABI0(libc_poll_trampoline), uintptr(unsafe.Pointer(pfds)), npfds, uintptr(int64(timeout)))
 	return int32(r), int32(err)
 }
 

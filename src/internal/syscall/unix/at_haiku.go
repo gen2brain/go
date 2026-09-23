@@ -5,15 +5,13 @@
 package unix
 
 import (
+	"internal/abi"
 	"syscall"
 	"unsafe"
 )
 
-// Implemented as syscall_syscall6 in runtime/syscall_haiku.go.
-func syscall6(trap, nargs, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err syscall.Errno)
-
-// Implemented as syscall_rawSyscall6 in runtime/syscall_haiku.go.
-func rawSyscall6(trap, nargs, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err syscall.Errno)
+//go:linkname syscall_syscall6 syscall.syscall6
+func syscall_syscall6(fn, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err syscall.Errno)
 
 //go:cgo_import_dynamic libc_faccessat faccessat "libroot.so"
 //go:cgo_import_dynamic libc_fchmodat fchmodat "libroot.so"
@@ -28,33 +26,18 @@ func rawSyscall6(trap, nargs, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, e
 //go:cgo_import_dynamic libc_mkdirat mkdirat "libroot.so"
 //go:cgo_import_dynamic libc_utimensat utimensat "libroot.so"
 
-//go:linkname procFaccessat libc_faccessat
-//go:linkname procFchmodat libc_fchmodat
-//go:linkname procFchownat libc_fchownat
-//go:linkname procFstatat libc_fstatat
-//go:linkname procLinkat libc_linkat
-//go:linkname procOpenat libc_openat
-//go:linkname procRenameat libc_renameat
-//go:linkname procSymlinkat libc_symlinkat
-//go:linkname procUnlinkat libc_unlinkat
-//go:linkname procReadlinkat libc_readlinkat
-//go:linkname procMkdirat libc_mkdirat
-//go:linkname procUtimensat libc_utimensat
-
-var (
-	procFaccessat  uintptr
-	procFchmodat   uintptr
-	procFchownat   uintptr
-	procFstatat    uintptr
-	procLinkat     uintptr
-	procOpenat     uintptr
-	procRenameat   uintptr
-	procSymlinkat  uintptr
-	procUnlinkat   uintptr
-	procReadlinkat uintptr
-	procMkdirat    uintptr
-	procUtimensat  uintptr
-)
+func libc_faccessat_trampoline()
+func libc_fchmodat_trampoline()
+func libc_fchownat_trampoline()
+func libc_fstatat_trampoline()
+func libc_linkat_trampoline()
+func libc_openat_trampoline()
+func libc_renameat_trampoline()
+func libc_symlinkat_trampoline()
+func libc_unlinkat_trampoline()
+func libc_readlinkat_trampoline()
+func libc_mkdirat_trampoline()
+func libc_utimensat_trampoline()
 
 const (
 	AT_EACCESS          = 0x08
@@ -70,7 +53,7 @@ func faccessat(dirfd int, path string, mode uint32, flags int) error {
 	if err != nil {
 		return err
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procFaccessat)), 4,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_faccessat_trampoline),
 		uintptr(dirfd), uintptr(unsafe.Pointer(p)), uintptr(mode), uintptr(flags), 0, 0)
 	if errno != 0 {
 		return errno
@@ -83,7 +66,7 @@ func Fstatat(dirfd int, path string, stat *syscall.Stat_t, flags int) error {
 	if err != nil {
 		return err
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procFstatat)), 4,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_fstatat_trampoline),
 		uintptr(dirfd), uintptr(unsafe.Pointer(p)), uintptr(unsafe.Pointer(stat)), uintptr(flags), 0, 0)
 	if errno != 0 {
 		return errno
@@ -96,7 +79,7 @@ func Openat(dirfd int, path string, flags int, perm uint32) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	fd, _, errno := syscall6(uintptr(unsafe.Pointer(&procOpenat)), 4,
+	fd, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_openat_trampoline),
 		uintptr(dirfd), uintptr(unsafe.Pointer(p)), uintptr(flags), uintptr(perm), 0, 0)
 	if errno != 0 {
 		return 0, errno
@@ -109,7 +92,7 @@ func Mkdirat(dirfd int, path string, mode uint32) error {
 	if err != nil {
 		return err
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procMkdirat)), 3,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_mkdirat_trampoline),
 		uintptr(dirfd), uintptr(unsafe.Pointer(p)), uintptr(mode), 0, 0, 0)
 	if errno != 0 {
 		return errno
@@ -122,7 +105,7 @@ func Fchmodat(dirfd int, path string, mode uint32, flags int) error {
 	if err != nil {
 		return err
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procFchmodat)), 4,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_fchmodat_trampoline),
 		uintptr(dirfd), uintptr(unsafe.Pointer(p)), uintptr(mode), uintptr(flags), 0, 0)
 	if errno != 0 {
 		return errno
@@ -135,7 +118,7 @@ func Fchownat(dirfd int, path string, uid, gid int, flags int) error {
 	if err != nil {
 		return err
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procFchownat)), 5,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_fchownat_trampoline),
 		uintptr(dirfd), uintptr(unsafe.Pointer(p)), uintptr(uid), uintptr(gid), uintptr(flags), 0)
 	if errno != 0 {
 		return errno
@@ -152,7 +135,7 @@ func Linkat(oldDirfd int, oldPath string, newDirfd int, newPath string, flags in
 	if err != nil {
 		return err
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procLinkat)), 5,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_linkat_trampoline),
 		uintptr(oldDirfd), uintptr(unsafe.Pointer(op)),
 		uintptr(newDirfd), uintptr(unsafe.Pointer(np)),
 		uintptr(flags), 0)
@@ -171,7 +154,7 @@ func Renameat(oldDirfd int, oldPath string, newDirfd int, newPath string) error 
 	if err != nil {
 		return err
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procRenameat)), 4,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_renameat_trampoline),
 		uintptr(oldDirfd), uintptr(unsafe.Pointer(op)),
 		uintptr(newDirfd), uintptr(unsafe.Pointer(np)),
 		0, 0)
@@ -190,7 +173,7 @@ func Symlinkat(oldPath string, newDirfd int, newPath string) error {
 	if err != nil {
 		return err
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procSymlinkat)), 3,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_symlinkat_trampoline),
 		uintptr(unsafe.Pointer(op)), uintptr(newDirfd), uintptr(unsafe.Pointer(np)),
 		0, 0, 0)
 	if errno != 0 {
@@ -208,7 +191,7 @@ func Readlinkat(dirfd int, path string, buf []byte) (int, error) {
 	if len(buf) > 0 {
 		bufp = &buf[0]
 	}
-	n, _, errno := syscall6(uintptr(unsafe.Pointer(&procReadlinkat)), 4,
+	n, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_readlinkat_trampoline),
 		uintptr(dirfd), uintptr(unsafe.Pointer(p)),
 		uintptr(unsafe.Pointer(bufp)), uintptr(len(buf)), 0, 0)
 	if errno != 0 {
@@ -222,7 +205,7 @@ func Unlinkat(dirfd int, path string, flags int) error {
 	if err != nil {
 		return err
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procUnlinkat)), 3,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_unlinkat_trampoline),
 		uintptr(dirfd), uintptr(unsafe.Pointer(p)), uintptr(flags), 0, 0, 0)
 	if errno != 0 {
 		return errno
@@ -235,7 +218,7 @@ func utimensat(dirfd int, path string, times *[2]syscall.Timespec, flags int) er
 	if err != nil {
 		return err
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procUtimensat)), 4,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_utimensat_trampoline),
 		uintptr(dirfd), uintptr(unsafe.Pointer(p)),
 		uintptr(unsafe.Pointer(times)), uintptr(flags), 0, 0)
 	if errno != 0 {

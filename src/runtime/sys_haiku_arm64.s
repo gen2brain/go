@@ -161,30 +161,26 @@ TEXT runtime·usleep1(SB),NOSPLIT,$0
 
 // Runs on OS stack. duration (in microseconds) is in R0.
 TEXT usleep2<>(SB),NOSPLIT,$0
-	MOVD	$libc_usleep(SB), R11
-	CALL	(R11)
+	CALL	libc_usleep(SB)
 	RET
 
 // Runs on OS stack, called from runtime·osyield.
 TEXT runtime·osyield1(SB),NOSPLIT,$0
-	MOVD	$libc_sched_yield(SB), R11
-	CALL	(R11)
+	CALL	libc_sched_yield(SB)
 	RET
 
 // Trivial wrappers used when no g is available (newosproc0/exit/write1).
 
 TEXT runtime·exit1(SB),NOSPLIT,$0-4
 	MOVW	code+0(FP), R0
-	MOVD	$libc_exit(SB), R11
-	CALL	(R11)
+	CALL	libc_exit(SB)
 	RET
 
 TEXT runtime·write2(SB),NOSPLIT,$0-28
 	MOVD	fd+0(FP), R0
 	MOVD	p+8(FP),  R1
 	MOVW	n+16(FP), R2
-	MOVD	$libc_write(SB), R11
-	CALL	(R11)
+	CALL	libc_write(SB)
 	MOVW	R0, ret+24(FP)
 	RET
 
@@ -192,38 +188,33 @@ TEXT runtime·sigaction1(SB),NOSPLIT,$0-24
 	MOVD	sig+0(FP),  R0
 	MOVD	new+8(FP),  R1
 	MOVD	old+16(FP), R2
-	MOVD	$libc_sigaction(SB), R11
-	CALL	(R11)
+	CALL	libc_sigaction(SB)
 	RET
 
 TEXT runtime·sigprocmask1(SB),NOSPLIT,$0-24
 	MOVD	how+0(FP), R0
 	MOVD	new+8(FP), R1
 	MOVD	old+16(FP), R2
-	MOVD	$libc_sigprocmask(SB), R11
-	CALL	(R11)
+	CALL	libc_sigprocmask(SB)
 	RET
 
 TEXT runtime·pthread_attr_init1(SB),NOSPLIT,$0-12
 	MOVD	attr+0(FP), R0
-	MOVD	$libc_pthread_attr_init(SB), R11
-	CALL	(R11)
+	CALL	libc_pthread_attr_init(SB)
 	MOVW	R0, ret+8(FP)
 	RET
 
 TEXT runtime·pthread_attr_setdetachstate1(SB),NOSPLIT,$0-20
 	MOVD	attr+0(FP),  R0
 	MOVW	state+8(FP), R1
-	MOVD	$libc_pthread_attr_setdetachstate(SB), R11
-	CALL	(R11)
+	CALL	libc_pthread_attr_setdetachstate(SB)
 	MOVW	R0, ret+16(FP)
 	RET
 
 TEXT runtime·pthread_attr_setstacksize1(SB),NOSPLIT,$0-20
 	MOVD	attr+0(FP), R0
 	MOVD	size+8(FP), R1
-	MOVD	$libc_pthread_attr_setstacksize(SB), R11
-	CALL	(R11)
+	CALL	libc_pthread_attr_setstacksize(SB)
 	MOVW	R0, ret+16(FP)
 	RET
 
@@ -232,8 +223,7 @@ TEXT runtime·pthread_create1(SB),NOSPLIT,$0-36
 	MOVD	attr+8(FP), R1
 	MOVD	fn+16(FP),  R2
 	MOVD	arg+24(FP), R3
-	MOVD	$libc_pthread_create(SB), R11
-	CALL	(R11)
+	CALL	libc_pthread_create(SB)
 	MOVW	R0, ret+32(FP)
 	RET
 
@@ -241,8 +231,7 @@ TEXT runtime·pthread_create1(SB),NOSPLIT,$0-36
 // and stores the resulting byte offset (slot index * 8) into runtime.tls_g.
 // Called once from rt0_go before any TPIDR-relative TLS access.
 TEXT runtime·haikuTlsInit(SB),NOSPLIT,$0
-	MOVD	$libc_tls_allocate(SB), R11
-	CALL	(R11)			// R0 = tls_allocate() (slot index, int32)
+	CALL	libc_tls_allocate(SB)			// R0 = tls_allocate() (slot index, int32)
 	SXTW	R0, R0			// sign-extend int32 to 64 bits
 	LSL	$3, R0, R0		// byte offset = slot * 8
 	MOVD	R0, runtime·tls_g(SB)

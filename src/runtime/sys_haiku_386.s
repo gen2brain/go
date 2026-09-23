@@ -54,9 +54,9 @@ TEXT runtime·asmsyscall6(SB),NOSPLIT|NOFRAME,$0
 	MOVL	$0, 0(DX)
 
 skiperrno1:
-	// Marshal up to 6 arguments onto a 16-byte aligned stack.
+	// Marshal up to 9 arguments onto a 16-byte aligned stack.
 	ANDL	$~15, SP
-	SUBL	$32, SP
+	SUBL	$48, SP
 	MOVL	libcall_args(BX), SI
 	MOVL	libcall_n(BX), CX
 	MOVL	SP, DI

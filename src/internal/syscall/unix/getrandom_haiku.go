@@ -4,13 +4,14 @@
 
 package unix
 
-import "unsafe"
+import (
+	"internal/abi"
+	"unsafe"
+)
 
 //go:cgo_import_dynamic libc_getentropy getentropy "libroot.so"
 
-//go:linkname procGetentropy libc_getentropy
-
-var procGetentropy uintptr
+func libc_getentropy_trampoline()
 
 // GetRandomFlag is a flag supported by the getrandom system call.
 type GetRandomFlag uintptr
@@ -26,8 +27,7 @@ func GetRandom(p []byte, flags GetRandomFlag) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	_, _, errno := syscall6(uintptr(unsafe.Pointer(&procGetentropy)),
-		2,
+	_, _, errno := syscall_syscall6(abi.FuncPCABI0(libc_getentropy_trampoline),
 		uintptr(unsafe.Pointer(&p[0])),
 		uintptr(len(p)),
 		0, 0, 0, 0)

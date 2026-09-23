@@ -173,6 +173,24 @@ freebsd_riscv64)
 	# API consistent between platforms.
 	mktypes="GOARCH=$GOARCH go tool cgo -godefs -- -fsigned-char"
 	;;
+haiku_386)
+	GOOSARCH_in="syscall_haiku_$GOARCH.go"
+	mkerrors=
+	mksyscall="./mksyscall.pl -l32 -haiku"
+	mkasm="go run mkasm.go"
+	;;
+haiku_amd64)
+	GOOSARCH_in="syscall_haiku_$GOARCH.go"
+	mkerrors=
+	mksyscall="./mksyscall.pl -haiku"
+	mkasm="go run mkasm.go"
+	;;
+haiku_arm64)
+	GOOSARCH_in="syscall_haiku_$GOARCH.go"
+	mkerrors=
+	mksyscall="./mksyscall.pl -haiku"
+	mkasm="go run mkasm.go"
+	;;
 linux_386)
 	mkerrors="$mkerrors -m32"
 	mksyscall="./mksyscall.pl -l32"

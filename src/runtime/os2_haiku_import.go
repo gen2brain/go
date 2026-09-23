@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build haiku && !arm64
-
 package runtime
 
 //go:cgo_import_dynamic libc__errnop _errnop "libroot.so"

@@ -4,19 +4,8 @@
 
 package syscall
 
-import "unsafe"
-
 func (iov *Iovec) SetLen(length int) {
 	iov.Len = uint64(length)
-}
-
-func mmap(addr uintptr, length uintptr, prot, flags, fd int, offset int64) (uintptr, error) {
-	r0, _, e1 := syscall6(uintptr(unsafe.Pointer(&libc_mmap)), 6,
-		addr, length, uintptr(prot), uintptr(flags), uintptr(fd), uintptr(offset))
-	if e1 != 0 {
-		return 0, errnoErr(e1)
-	}
-	return r0, nil
 }
 
 func setTimespec(sec, nsec int64) Timespec { return Timespec{Sec: sec, Nsec: nsec} }

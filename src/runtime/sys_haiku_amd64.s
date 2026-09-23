@@ -252,8 +252,7 @@ noswitch:
 TEXT usleep2<>(SB),NOSPLIT,$0
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_usleep(SB), AX
-	CALL	AX
+	CALL	libc_usleep(SB)
 	MOVQ	BX, SP
 	RET
 
@@ -261,8 +260,7 @@ TEXT usleep2<>(SB),NOSPLIT,$0
 TEXT runtime·osyield1(SB),NOSPLIT,$0
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_sched_yield(SB), AX
-	CALL	AX
+	CALL	libc_sched_yield(SB)
 	MOVQ	BX, SP
 	RET
 
@@ -272,8 +270,7 @@ TEXT runtime·exit1(SB),NOSPLIT,$0-4
 	MOVL	code+0(FP), DI
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_exit(SB), AX
-	CALL	AX
+	CALL	libc_exit(SB)
 	MOVQ	BX, SP
 	RET
 
@@ -283,8 +280,7 @@ TEXT runtime·write2(SB),NOSPLIT,$0-28
 	MOVL	n+16(FP),  DX
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_write(SB), AX
-	CALL	AX
+	CALL	libc_write(SB)
 	MOVQ	BX, SP
 	MOVL	AX, ret+24(FP)
 	RET
@@ -295,8 +291,7 @@ TEXT runtime·sigaction1(SB),NOSPLIT,$0-24
 	MOVQ	old+16(FP), DX
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_sigaction(SB), AX
-	CALL	AX
+	CALL	libc_sigaction(SB)
 	MOVQ	BX, SP
 	RET
 
@@ -306,8 +301,7 @@ TEXT runtime·sigprocmask1(SB),NOSPLIT,$0-24
 	MOVQ	old+16(FP), DX
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_sigprocmask(SB), AX
-	CALL	AX
+	CALL	libc_sigprocmask(SB)
 	MOVQ	BX, SP
 	RET
 
@@ -315,8 +309,7 @@ TEXT runtime·pthread_attr_init1(SB),NOSPLIT,$0-12
 	MOVQ	attr+0(FP), DI
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_pthread_attr_init(SB), AX
-	CALL	AX
+	CALL	libc_pthread_attr_init(SB)
 	MOVQ	BX, SP
 	MOVL	AX, ret+8(FP)
 	RET
@@ -326,8 +319,7 @@ TEXT runtime·pthread_attr_setdetachstate1(SB),NOSPLIT,$0-20
 	MOVL	state+8(FP), SI
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_pthread_attr_setdetachstate(SB), AX
-	CALL	AX
+	CALL	libc_pthread_attr_setdetachstate(SB)
 	MOVQ	BX, SP
 	MOVL	AX, ret+16(FP)
 	RET
@@ -337,8 +329,7 @@ TEXT runtime·pthread_attr_setstacksize1(SB),NOSPLIT,$0-20
 	MOVQ	size+8(FP), SI
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_pthread_attr_setstacksize(SB), AX
-	CALL	AX
+	CALL	libc_pthread_attr_setstacksize(SB)
 	MOVQ	BX, SP
 	MOVL	AX, ret+16(FP)
 	RET
@@ -350,8 +341,7 @@ TEXT runtime·pthread_create1(SB),NOSPLIT,$0-36
 	MOVQ	arg+24(FP), CX
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_pthread_create(SB), AX
-	CALL	AX
+	CALL	libc_pthread_create(SB)
 	MOVQ	BX, SP
 	MOVL	AX, ret+32(FP)
 	RET
@@ -362,8 +352,7 @@ TEXT runtime·pthread_create1(SB),NOSPLIT,$0-36
 TEXT runtime·haikuTlsInit(SB),NOSPLIT,$0
 	MOVQ	SP, BX
 	ANDQ	$~15, SP
-	LEAQ	libc_tls_allocate(SB), AX
-	CALL	AX			// AX = tls_allocate() (slot index, int32)
+	CALL	libc_tls_allocate(SB)			// AX = tls_allocate() (slot index, int32)
 	MOVQ	BX, SP
 	MOVLQSX	AX, AX			// sign-extend int32 result to 64 bits
 	SHLQ	$3, AX			// byte offset = slot * 8

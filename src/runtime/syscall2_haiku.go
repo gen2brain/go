@@ -3,37 +3,19 @@
 // license that can be found in the LICENSE file.
 
 // Additional libroot symbols used by the runtime side of the exec_libc.go
-// forkAndExecInChild path. The matching var libFunc declarations live
-// here alongside, mirroring runtime/syscall_solaris.go.
+// forkAndExecInChild path, mirroring runtime/syscall_solaris.go.
 
 package runtime
 
-import _ "unsafe" // for go:linkname
-
-//go:linkname libc_chdir libc_chdir
-//go:linkname libc_chroot libc_chroot
-//go:linkname libc_dup2 libc_dup2
-//go:linkname libc_execve libc_execve
-//go:linkname libc_fork libc_fork
-//go:linkname libc_ioctl libc_ioctl
-//go:linkname libc_setgid libc_setgid
-//go:linkname libc_setgroups libc_setgroups
-//go:linkname libc_setpgid libc_setpgid
-//go:linkname libc_setrlimit libc_setrlimit
-//go:linkname libc_setsid libc_setsid
-//go:linkname libc_setuid libc_setuid
-
-var (
-	libc_chdir,
-	libc_chroot,
-	libc_dup2,
-	libc_execve,
-	libc_fork,
-	libc_ioctl,
-	libc_setgid,
-	libc_setgroups,
-	libc_setpgid,
-	libc_setrlimit,
-	libc_setsid,
-	libc_setuid libFunc
-)
+func libc_chdir_trampoline()
+func libc_chroot_trampoline()
+func libc_dup2_trampoline()
+func libc_execve_trampoline()
+func libc_fork_trampoline()
+func libc_ioctl_trampoline()
+func libc_setgid_trampoline()
+func libc_setgroups_trampoline()
+func libc_setpgid_trampoline()
+func libc_setrlimit_trampoline()
+func libc_setsid_trampoline()
+func libc_setuid_trampoline()

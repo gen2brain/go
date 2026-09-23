@@ -22,7 +22,7 @@ import (
 //
 // The cgo_import_dynamic directives binding these libc_* names to libroot
 // symbols live in os2_haiku_import.go (and, on arm64, os2_haiku_import_arm64.go,
-// which imports them under _dyn names for the trampolines in sys_haiku_arm64.s).
+// which imports them under _dyn names for the trampolines in sys_tramp_haiku_arm64.s).
 
 //go:linkname libc__errnop libc__errnop
 //go:linkname libc_clock_gettime libc_clock_gettime

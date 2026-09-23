@@ -16,11 +16,6 @@
 #include "textflag.h"
 #include "cgo/abi_arm64.h"
 
-// runtime·settls is a no-op on Haiku. Each thread's TPIDR_EL0 is set up by the
-// kernel to point at the per-thread TLS array.
-TEXT runtime·settls(SB),NOSPLIT,$0
-	RET
-
 // Call a library function with the AAPCS64 calling convention.
 // The called function can take a maximum of 6 INTEGER class arguments.
 //

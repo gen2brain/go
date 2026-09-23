@@ -782,7 +782,7 @@ func TestSegv(t *testing.T) {
 
 			// No runtime errors like "runtime: unknown pc".
 			switch runtime.GOOS {
-			case "darwin", "ios", "illumos", "solaris":
+			case "darwin", "haiku", "ios", "illumos", "solaris":
 				// Runtime sometimes throws when generating the traceback.
 				testenv.SkipFlaky(t, 49182)
 			case "linux":
@@ -962,7 +962,7 @@ func TestEnsureBindM(t *testing.T) {
 func TestStackSwitchCallback(t *testing.T) {
 	t.Parallel()
 	switch runtime.GOOS {
-	case "windows", "plan9", "android", "ios", "openbsd": // no getcontext
+	case "windows", "plan9", "android", "haiku", "ios", "openbsd": // no getcontext
 		t.Skipf("skipping test on %s", runtime.GOOS)
 	}
 	if asan.Enabled {

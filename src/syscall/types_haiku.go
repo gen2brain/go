@@ -146,6 +146,16 @@ const (
 	SizeofICMPv6Filter     = C.sizeof_struct_icmp6_filter
 )
 
+// Misc
+
+const (
+	AT_FDCWD            = C.AT_FDCWD
+	AT_EACCESS          = C.AT_EACCESS
+	AT_REMOVEDIR        = C.AT_REMOVEDIR
+	AT_SYMLINK_FOLLOW   = C.AT_SYMLINK_FOLLOW
+	AT_SYMLINK_NOFOLLOW = C.AT_SYMLINK_NOFOLLOW
+)
+
 // Select
 
 type FdSet C.fd_set

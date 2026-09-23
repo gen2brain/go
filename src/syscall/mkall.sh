@@ -175,21 +175,21 @@ freebsd_riscv64)
 	;;
 haiku_386)
 	GOOSARCH_in="syscall_haiku_$GOARCH.go"
-	mkerrors=
+	mkerrors="$mkerrors -m32"
 	mksyscall="./mksyscall.pl -l32 -haiku"
 	mktypes="GOARCH=$GOARCH go tool cgo -godefs -- -fsigned-char"
 	mkasm="go run mkasm.go"
 	;;
 haiku_amd64)
 	GOOSARCH_in="syscall_haiku_$GOARCH.go"
-	mkerrors=
+	mkerrors="$mkerrors -m64"
 	mksyscall="./mksyscall.pl -haiku"
 	mktypes="GOARCH=$GOARCH go tool cgo -godefs -- -fsigned-char"
 	mkasm="go run mkasm.go"
 	;;
 haiku_arm64)
 	GOOSARCH_in="syscall_haiku_$GOARCH.go"
-	mkerrors=
+	mkerrors="$mkerrors"
 	mksyscall="./mksyscall.pl -haiku"
 	mktypes="GOARCH=$GOARCH go tool cgo -godefs -- -fsigned-char"
 	mkasm="go run mkasm.go"

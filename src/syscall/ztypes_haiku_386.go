@@ -207,6 +207,14 @@ const (
 	SizeofICMPv6Filter     = 0x20
 )
 
+const (
+	AT_FDCWD            = -0x64
+	AT_EACCESS          = 0x8
+	AT_REMOVEDIR        = 0x4
+	AT_SYMLINK_FOLLOW   = 0x2
+	AT_SYMLINK_NOFOLLOW = 0x1
+)
+
 type FdSet struct {
 	Bits [32]uint32
 }

@@ -108,7 +108,7 @@ func (m *mmapper) Munmap(data []byte) (err error) {
 type Errno uintptr
 
 func (e Errno) Error() string {
-	if 0 <= int(e) && int(e) < len(errors) {
+	if 0 <= int(e) && int(e) < len(errors) || runtime.GOOS == "haiku" {
 		s := errors[e]
 		if s != "" {
 			return s

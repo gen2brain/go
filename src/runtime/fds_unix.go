@@ -17,15 +17,17 @@ func checkfds() {
 	const (
 		// F_GETFD, EBADF, O_RDWR are standard across all unixes we support, so
 		// we define them here rather than in each of the OS specific files.
-		// Exception: Haiku's F_GETFD is 0x02 (0x01 is F_DUPFD there).
+		// Exception: Haiku's F_GETFD is 0x02 (0x01 is F_DUPFD there) and its
+		// EBADF is B_FILE_ERROR.
 		F_GETFD       = 0x01
 		F_GETFD_haiku = 0x02
 		EBADF         = 0x09
+		EBADF_haiku   = -0x7fffa000
 		O_RDWR        = 0x02
 	)
-	getfd := int32(F_GETFD)
+	getfd, ebadf := int32(F_GETFD), int32(EBADF)
 	if GOOS == "haiku" {
-		getfd = F_GETFD_haiku
+		getfd, ebadf = F_GETFD_haiku, EBADF_haiku
 	}
 
 	devNull := []byte("/dev/null\x00")
@@ -35,7 +37,7 @@ func checkfds() {
 			continue
 		}
 
-		if errno != EBADF {
+		if errno != ebadf {
 			print("runtime: unexpected error while checking standard file descriptor ", i, ", errno=", errno, "\n")
 			throw("cannot open standard fds")
 		}

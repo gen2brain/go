@@ -53,8 +53,8 @@ noargs:
 	MOVD	g_m(g), R11
 	MOVD	(m_mOS+mOS_perrno)(R11), R11
 	CBZ	R11, readerrno_done
-	MOVWU	(R11), R0		// zero-extend errno (a 32-bit B_ code), matching
-	MOVD	R0, libcall_err(R10)	// amd64's MOVL, so the errno table matches
+	MOVW	(R11), R0		// errno is a negative int
+	MOVD	R0, libcall_err(R10)
 readerrno_done:
 	RET
 

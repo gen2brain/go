@@ -71,7 +71,7 @@ skipargs:
 	MOVQ	(m_mOS+mOS_perrno)(BX), AX
 	CMPQ	AX, $0
 	JEQ	skiperrno2
-	MOVL	0(AX), AX
+	MOVLQSX	0(AX), AX		// errno is a negative int
 	MOVQ	AX, libcall_err(DI)
 
 skiperrno2:

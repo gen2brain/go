@@ -308,7 +308,7 @@ func write1(fd uintptr, p unsafe.Pointer, n int32) int32 {
 	if gp != nil {
 		r, errno := syscall3(abi.FuncPCABI0(libc_write_trampoline), uintptr(fd), uintptr(p), uintptr(n))
 		if int32(r) < 0 {
-			return -int32(haikuErrnoToPosix(errno))
+			return int32(errno)
 		}
 		return int32(r)
 	}
@@ -319,7 +319,7 @@ func write1(fd uintptr, p unsafe.Pointer, n int32) int32 {
 func read(fd int32, p unsafe.Pointer, n int32) int32 {
 	r, errno := syscall3(abi.FuncPCABI0(libc_read_trampoline), uintptr(fd), uintptr(p), uintptr(n))
 	if int32(r) < 0 {
-		return -int32(haikuErrnoToPosix(errno))
+		return int32(errno)
 	}
 	return int32(r)
 }
@@ -650,5 +650,5 @@ func signalM(mp *m, sig int) {
 //go:nosplit
 func fcntl(fd, cmd, arg int32) (int32, int32) {
 	r, errno := syscall3(abi.FuncPCABI0(libc_fcntl_trampoline), uintptr(fd), uintptr(cmd), uintptr(arg))
-	return int32(r), int32(haikuErrnoToPosix(errno))
+	return int32(r), int32(errno)
 }

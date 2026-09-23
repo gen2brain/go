@@ -39,13 +39,19 @@ func TestBadOpen(t *testing.T) {
 	if fd != -1 {
 		t.Errorf("open(%q)=%d, want -1", nonfile, fd)
 	}
+	ebadf := syscall.EBADF
+	wantErr := -int32(ebadf)
+	if runtime.GOOS == "haiku" {
+		// Haiku errno values are negative.
+		wantErr = int32(ebadf)
+	}
 	var buf [32]byte
 	r := runtime.Read(-1, unsafe.Pointer(&buf[0]), int32(len(buf)))
-	if got, want := r, -int32(syscall.EBADF); got != want {
+	if got, want := r, wantErr; got != want {
 		t.Errorf("read()=%d, want %d", got, want)
 	}
 	w := runtime.Write(^uintptr(0), unsafe.Pointer(&buf[0]), int32(len(buf)))
-	if got, want := w, -int32(syscall.EBADF); got != want {
+	if got, want := w, wantErr; got != want {
 		t.Errorf("write()=%d, want %d", got, want)
 	}
 	c := runtime.Close(-1)

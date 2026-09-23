@@ -18,10 +18,6 @@ func Syscall6(trap, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
 func RawSyscall(trap, a1, a2, a3 uintptr) (r1, r2 uintptr, err Errno)
 func RawSyscall6(trap, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
 
-// haikuErrnoToPosix maps a raw libroot errno to the POSIX-positive value
-// the syscall package exposes. Implemented in runtime/syscall_haiku.go.
-func haikuErrnoToPosix(raw uintptr) uintptr
-
 // syscall, syscall6, syscall9, rawSyscall and rawSyscall6 call the libroot
 // function at fn, a libc_X_trampoline address. They are used by the wrappers
 // generated into zsyscall_haiku_$GOARCH.go and are implemented in the runtime.
@@ -280,7 +276,7 @@ func FindImagePath() (string, error) {
 	var buf [4096]byte
 	status := findPath(abi.FuncPCABI0(libc_find_path_trampoline), B_FIND_PATH_IMAGE_PATH, nil, &buf[0], uintptr(len(buf)))
 	if status < 0 {
-		return "", Errno(haikuErrnoToPosix(uintptr(uint32(status))))
+		return "", Errno(status)
 	}
 	n := 0
 	for n < len(buf) && buf[n] != 0 {
@@ -308,7 +304,7 @@ func ReadDirent(fd int, buf []byte) (n int, err error) {
 		count, e = readDirRaw(fd, buf)
 	}
 	if e != 0 {
-		return 0, Errno(haikuErrnoToPosix(uintptr(uint32(int32(e)))))
+		return 0, Errno(e)
 	}
 	if count == 0 {
 		return 0, nil
@@ -338,7 +334,7 @@ func readDirRaw(fd int, buf []byte) (count int32, status int32) {
 func promoteToDirFD(fd int) error {
 	dirFD := kernOpenDir(fd, nil)
 	if dirFD < 0 {
-		return Errno(haikuErrnoToPosix(uintptr(uint32(dirFD))))
+		return Errno(dirFD)
 	}
 	if err := Dup2(int(dirFD), fd); err != nil {
 		Close(int(dirFD))
@@ -568,8 +564,6 @@ func (w WaitStatus) TrapCause() int {
 // SetLen sets the Cmsghdr length field.
 func (cmsg *Cmsghdr) SetLen(length int) { cmsg.Len = uint32(length) }
 
-const SCM_RIGHTS = 0x1
-
 // recvmsgRaw / sendmsgN feed the public Recvmsg / Sendmsg in syscall_unix.go.
 func recvmsgRaw(fd int, p, oob []byte, flags int, rsa *RawSockaddrAny) (n, oobn int, recvflags int, err error) {
 	var msg Msghdr
@@ -623,50 +617,24 @@ func sendmsgN(fd int, p, oob []byte, ptr unsafe.Pointer, salen _Socklen, flags i
 	return sendmsg(fd, &msg, flags)
 }
 
-// Misc constants exec_unix.go needs.
-
-const (
-	RLIMIT_NOFILE = 8
-	RLIMIT_AS     = 6
-	RLIMIT_CORE   = 4
-	RLIMIT_CPU    = 0
-	RLIMIT_DATA   = 2
-	RLIMIT_FSIZE  = 1
-	RLIMIT_NPROC  = 7
-	RLIMIT_RSS    = 5
-	RLIMIT_STACK  = 3
-)
-
-const (
-	PRIO_PROCESS = 0
-	PRIO_PGRP    = 1
-	PRIO_USER    = 2
-)
-
-const (
-	TCIFLUSH  = 0x01
-	TCOFLUSH  = 0x02
-	TCIOFLUSH = 0x03
-)
-
-const (
-	RUSAGE_SELF     = 0
-	RUSAGE_CHILDREN = -1
-	RUSAGE_THREAD   = 1
-)
-
 const SYS_EXECVE = 0
+
+const (
+	TIOCNOTTY         = 0
+	_F_DUP2FD_CLOEXEC = 0
+
+	SIGIO = SIGPOLL
+)
 
 // Errno aliases for symbols other Unix flavors export but Haiku does not
 // have at the libc layer. Mapped to the closest Haiku error so that
 // errors.Is checks in net behave reasonably.
 const (
-	ENOTSUPP        = ENOTSUP
-	EPROTOOPT       = ENOPROTOOPT
-	EREMOTE         = ENOTSUP
-	ESOCKTNOSUPPORT = EPROTONOSUPPORT
-	ETOOMANYREFS    = ENOBUFS
-	EUSERS          = ENOMEM
+	ENOTSUPP     = ENOTSUP
+	EPROTOOPT    = ENOPROTOOPT
+	EREMOTE      = ENOTSUP
+	ETOOMANYREFS = ENOBUFS
+	EUSERS       = ENOMEM
 )
 
 /*

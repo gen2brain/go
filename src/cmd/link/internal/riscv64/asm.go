@@ -259,6 +259,11 @@ func findHI20Symbol(ctxt *ld.Link, ldr *loader.Loader, val int64) loader.Sym {
 	return 0
 }
 
+// isHaikuDynCall reports whether a relocation is a call to a libroot import.
+func isHaikuDynCall(isHaiku bool, ldr *loader.Loader, t objabi.RelocType, rs loader.Sym) bool {
+	return isHaiku && t == objabi.R_RISCV_CALL && ldr.SymType(rs) == sym.SDYNIMPORT
+}
+
 func elfreloc1(ctxt *ld.Link, out *ld.OutBuf, ldr *loader.Loader, s loader.Sym, r loader.ExtReloc, ri int, sectoff int64) bool {
 	elfsym := ld.ElfSymForReloc(ctxt, r.Xsym)
 	switch r.Type {
@@ -285,9 +290,16 @@ func elfreloc1(ctxt *ld.Link, out *ld.OutBuf, ldr *loader.Loader, s loader.Sym, 
 		objabi.R_RISCV_PCREL_STYPE,
 		objabi.R_RISCV_TLS_IE,
 		objabi.R_RISCV_GOT_PCREL_ITYPE:
+		relocs := ldr.Relocs(s)
+		if isHaikuDynCall(ctxt.IsHaiku(), ldr, r.Type, relocs.At(ri).Sym()) {
+			out.Write64(uint64(sectoff))
+			out.Write64(uint64(elf.R_RISCV_CALL_PLT) | uint64(elfsym)<<32)
+			out.Write64(uint64(r.Xadd))
+			break
+		}
+
 		// Find the text symbol for the AUIPC instruction targeted
 		// by this relocation.
-		relocs := ldr.Relocs(s)
 		offset := int64(relocs.At(ri).Off())
 		hi20Sym := findHI20Symbol(ctxt, ldr, ldr.SymValue(s)+offset)
 		if hi20Sym == 0 {
@@ -480,6 +492,9 @@ func archreloc(target *ld.Target, ldr *loader.Loader, syms *ld.ArchSyms, r loade
 			return val, 1, true
 
 		case objabi.R_RISCV_CALL, objabi.R_RISCV_PCREL_ITYPE, objabi.R_RISCV_PCREL_STYPE, objabi.R_RISCV_TLS_IE, objabi.R_RISCV_TLS_LE, objabi.R_RISCV_GOT_PCREL_ITYPE:
+			if isHaikuDynCall(target.IsHaiku(), ldr, r.Type(), rs) {
+				return val, 1, true
+			}
 			return val, 2, true
 		}
 

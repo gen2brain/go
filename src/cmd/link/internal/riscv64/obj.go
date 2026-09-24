@@ -42,6 +42,7 @@ func Init() (*sys.Arch, ld.Arch) {
 			LinuxdynldMusl: "/lib/ld-musl-riscv64.so.1",
 
 			Freebsddynld:   "/usr/libexec/ld-elf.so.1",
+			Haikudynld:     "/system/runtime_loader",
 			Netbsddynld:    "XXX",
 			Openbsddynld:   "/usr/libexec/ld.so",
 			Dragonflydynld: "XXX",
@@ -58,11 +59,14 @@ func Init() (*sys.Arch, ld.Arch) {
 
 func archinit(ctxt *ld.Link) {
 	switch ctxt.HeadType {
-	case objabi.Hlinux, objabi.Hfreebsd, objabi.Hopenbsd:
+	case objabi.Hlinux, objabi.Hfreebsd, objabi.Hhaiku, objabi.Hopenbsd:
 		ld.Elfinit(ctxt)
 		ld.HEADR = ld.ELFRESERVE
 		if *ld.FlagRound == -1 {
 			*ld.FlagRound = 0x10000
+			if ctxt.HeadType == objabi.Hhaiku {
+				*ld.FlagRound = 0x1000
+			}
 		}
 		if *ld.FlagTextAddr == -1 {
 			*ld.FlagTextAddr = ld.Rnd(0x10000, *ld.FlagRound) + int64(ld.HEADR)

@@ -194,6 +194,13 @@ haiku_arm64)
 	mktypes="GOARCH=$GOARCH go tool cgo -godefs -- -fsigned-char"
 	mkasm="go run mkasm.go"
 	;;
+haiku_riscv64)
+	GOOSARCH_in="syscall_haiku_$GOARCH.go"
+	mkerrors="$mkerrors"
+	mksyscall="./mksyscall.pl -haiku"
+	mktypes="GOARCH=$GOARCH go tool cgo -godefs -- -fsigned-char"
+	mkasm="go run mkasm.go"
+	;;
 linux_386)
 	mkerrors="$mkerrors -m32"
 	mksyscall="./mksyscall.pl -l32"

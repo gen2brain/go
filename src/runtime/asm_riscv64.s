@@ -60,6 +60,10 @@ TEXT runtime·rt0_go(SB),NOSPLIT|TOPFRAME,$0
 	MOV	T1, (g_stack+stack_lo)(g)
 	MOV	X2, (g_stack+stack_hi)(g)
 
+#ifdef GOOS_haiku
+	CALL	runtime·haikuTlsInit(SB)
+#endif
+
 	// if there is a _cgo_init, call it using the gcc ABI.
 	MOV	_cgo_init(SB), T2
 	BEQ	T2, ZERO, nocgo

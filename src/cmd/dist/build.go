@@ -1796,6 +1796,7 @@ var cgoEnabled = map[string]bool{
 	"haiku/386":       true,
 	"haiku/amd64":     true,
 	"haiku/arm64":     true,
+	"haiku/riscv64":   true,
 	"illumos/amd64":   true,
 	"linux/386":       true,
 	"linux/amd64":     true,

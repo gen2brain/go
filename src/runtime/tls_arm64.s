@@ -10,10 +10,12 @@
 
 TEXT runtime·load_g(SB),NOSPLIT,$0
 #ifndef GOOS_darwin
+#ifndef GOOS_haiku
 #ifndef GOOS_openbsd
 #ifndef GOOS_windows
 	MOVB	runtime·iscgo(SB), R0
 	CBZ	R0, nocgo
+#endif
 #endif
 #endif
 #endif
@@ -31,10 +33,12 @@ nocgo:
 
 TEXT runtime·save_g(SB),NOSPLIT,$0
 #ifndef GOOS_darwin
+#ifndef GOOS_haiku
 #ifndef GOOS_openbsd
 #ifndef GOOS_windows
 	MOVB	runtime·iscgo(SB), R0
 	CBZ	R0, nocgo
+#endif
 #endif
 #endif
 #endif

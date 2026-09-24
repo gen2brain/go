@@ -3,11 +3,6 @@
 // license that can be found in the LICENSE file.
 //
 // System calls and other sys.stuff for ARM64, Haiku.
-// Each library symbol is invoked through asmcgocall via the libcall
-// trampoline runtime·asmsyscall6. The G pointer lives in R28 and is
-// preserved across libroot calls (AAPCS64 makes X28 callee-saved), so no
-// per-call TLS reload is needed. runtime·tls_g (declared in tls_arm64.s) only
-// serves save_g/load_g on the cgo path.
 
 #include "go_asm.h"
 #include "go_tls.h"
@@ -88,12 +83,8 @@ TEXT runtime·sigtramp(SB),NOSPLIT|TOPFRAME,$240
 	SAVE_R19_TO_R28(8*4)
 	SAVE_F8_TO_F15(8*14)
 
-	// Recover g. It may be unset if the signal hit a non-Go thread or, on
-	// the cgo path, C code that clobbered R28. load_g clobbers R0 and R27
-	// but leaves R1 (info) and R2 (ctx) untouched.
+	// libroot may use R28 as scratch; load_g clobbers R0 and R27 only.
 	MOVW	R0, 176(RSP)		// save signum
-	MOVBU	runtime·iscgo(SB), R0
-	CBZ	R0, 2(PC)
 	BL	runtime·load_g(SB)
 
 	// Save m->libcall and errno: a signal may interrupt runtime·asmsyscall6

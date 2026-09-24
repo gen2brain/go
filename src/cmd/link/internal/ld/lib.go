@@ -1569,6 +1569,8 @@ func (ctxt *Link) hostlink() {
 		// Haiku's libc and POSIX layer live in libroot; sockets are in libnetwork.
 		argv = append(argv, "-lroot")
 		argv = append(argv, "-lnetwork")
+		// Haiku links every image -shared; the program's own definitions always win.
+		argv = append(argv, "-Wl,-Bsymbolic")
 	}
 
 	// On PPC64, verify the external toolchain supports Power10. This is needed when
@@ -1823,6 +1825,8 @@ func (ctxt *Link) hostlink() {
 
 	// Force global symbols to be exported for dlopen, etc.
 	switch {
+	case ctxt.IsHaiku():
+		// The -shared link already exports every global symbol.
 	case ctxt.IsELF:
 		if ctxt.DynlinkingGo() || ctxt.BuildMode == BuildModeCShared || !linkerFlagSupported(ctxt.Arch, argv[0], altLinker, "-Wl,--export-dynamic-symbol=main") {
 			argv = append(argv, "-rdynamic")

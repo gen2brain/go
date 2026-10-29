@@ -32,6 +32,13 @@ func rawSyscall6(fn, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
 
 const ImplementsGetwd = true
 
+// Invented value, from the codes Haiku leaves to applications after B_ERRORS_END.
+const EBADFD = Errno(^uintptr(0x7fff0000 - 1))
+
+func init() {
+	errors[EBADFD] = "file descriptor in bad state"
+}
+
 // SockaddrDatalink is a placeholder; Haiku does not expose AF_LINK
 // the same way BSDs do.
 type SockaddrDatalink struct {
